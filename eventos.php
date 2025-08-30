@@ -57,15 +57,16 @@ $eventos = $stmt->fetchAll();
                     <div class="event-container">
                         <div class="event-title"><?php echo strtoupper(htmlspecialchars($evento['nombre'])); ?></div>
                         
-                        <div class="event-image">
-                            <?php if ($evento['imagen'] && file_exists('Uploads/' . $evento['imagen'])): ?>
-                                <img src="Uploads/<?php echo htmlspecialchars($evento['imagen']); ?>" 
-                                     alt="<?php echo htmlspecialchars($evento['nombre']); ?>">
-                            <?php else: ?>
-                                <img src="../Styles/GND.jpeg" 
-                                     alt="Imagen por defecto">
-                            <?php endif; ?>
-                        </div>
+                            <div class="event-image">
+                                <?php if (!empty($evento['imagen'])): ?>
+                                    <img src="/Uploads/<?php echo htmlspecialchars($evento['imagen']); ?>" 
+                                        alt="<?php echo htmlspecialchars($evento['nombre']); ?>">
+                                <?php else: ?>
+                                    <img src="../Styles/GND.jpeg" 
+                                        alt="Imagen por defecto">
+                                <?php endif; ?>
+                            </div>
+
                         
                         <div class="event-info">
                             <div><?php echo strtoupper(htmlspecialchars($evento['nombre'])); ?></div>

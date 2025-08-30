@@ -832,8 +832,10 @@ body {
             <div class="productos-grid">
                 <?php foreach ($productos as $producto): ?>
                     <article class="producto">
-                        <?php if ($producto['imagen'] && file_exists('Uploads/' . $producto['imagen'])): ?>
-                            <img src="Uploads/<?php echo htmlspecialchars($producto['imagen']); ?>" alt="<?php echo htmlspecialchars($producto['nombre']); ?>" class="producto-imagen">
+                        <?php if (!empty($producto['imagen'])): ?>
+                            <img src="/Uploads/<?php echo htmlspecialchars($producto['imagen']); ?>" 
+                                alt="<?php echo htmlspecialchars($producto['nombre']); ?>" 
+                                class="producto-imagen">
                         <?php else: ?>
                             <div class="producto-placeholder">Sin imagen</div>
                         <?php endif; ?>
@@ -843,6 +845,7 @@ body {
                             <p class="producto-precio">$<?php echo number_format($producto['precio'], 2); ?></p>
                         </div>
                     </article>
+
                 <?php endforeach; ?>
                 <?php if (empty($productos)): ?>
                     <div class="no-productos">No hay productos disponibles.</div>
