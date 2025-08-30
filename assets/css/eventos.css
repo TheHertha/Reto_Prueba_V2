@@ -1,0 +1,684 @@
+/* Reinicia márgenes, paddings y configura box-sizing para consistencia */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Configura el cuerpo de la página con fuente moderna y altura mínima */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #ffffff;
+    color: #000000;
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Encabezado con fondo oscuro y disposición flexible */
+.header {
+    background: #000000;
+    padding: 30px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-bottom: 1px solid #333333;
+}
+
+/* Estilo de los botones de regresar y administrar */
+.admin-link,
+.back-btn {
+    background: transparent;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+/* Posición del botón de administrar */
+.admin-link {
+    position: absolute;
+    right: 60px;
+}
+
+/* Posición del botón de regresar */
+.back-btn {
+    position: absolute;
+    left: 60px;
+}
+
+/* Efecto hover para los botones */
+.admin-link:hover,
+.back-btn:hover {
+    background: #ffffff;
+    color: #000000;
+}
+
+/* Título de la página */
+.page-title {
+    font-size: 28px;
+    font-weight: 300;
+    color: #ffffff;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+/* Contenido principal con animación de entrada */
+.main-content {
+    padding: 0;
+    animation: fadeIn 0.8s ease-out;
+}
+
+/* Contenedor principal de los eventos */
+.eventos-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 0;
+}
+
+/* Contenedor de cada evento */
+.event-container {
+    width: 90%;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #333333;
+    background: #ffffff;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+    padding: 20px 0 30px;
+}
+
+/* Efecto hover para el contenedor de evento */
+.event-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Línea decorativa superior en el contenedor de evento */
+.event-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #FFD700, #FF0000, #FFD700);
+}
+
+/* Mensaje cuando no hay eventos */
+.no-eventos {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 300;
+    color: #666666;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 60px 20px;
+    border: 1px solid #e0e0e0;
+    background: #f8f8f8;
+    width: 100%;
+}
+
+/* Título del evento */
+.event-title {
+    font-size: 20px;
+    font-weight: 300;
+    color: #000000;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f8f8f8;
+    text-align: center;
+    width: 100%;
+}
+
+/* Contenedor de la imagen del evento */
+.event-image {
+    padding: 10px;
+    text-align: center;
+    background: #ffffff;
+}
+
+/* Imagen del evento */
+.event-image img {
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    object-fit: cover;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+/* Efecto hover para la imagen */
+.event-image img:hover {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Información del evento */
+.event-info {
+    padding: 10px;
+    background: #ffffff;
+    border-top: 1px solid #e0e0e0;
+    width: 100%;
+    max-width: 700px;
+}
+
+/* Estilo de los elementos de información */
+.event-info > div {
+    margin-bottom: 12px;
+    font-size: 15px;
+    font-weight: 300;
+    letter-spacing: 1px;
+}
+
+/* Estilo del primer elemento de información (título) */
+.event-info > div:first-child {
+    font-size: 18px;
+    font-weight: 400;
+    color: #000000;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border-left: 3px solid #FFD700;
+    padding-left: 14px;
+}
+
+/* Estilo del segundo elemento de información (descripción) */
+.event-info > div:nth-child(2) {
+    font-size: 15px;
+    color: #666666;
+    font-style: italic;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+}
+
+/* Estilo del tercer elemento de información (fecha y hora) */
+.event-info > div:nth-child(3) {
+    font-size: 15px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #000000;
+}
+
+/* Estilo del último elemento de información */
+.event-info > div:last-child {
+    font-size: 13px;
+    color: #666666;
+}
+
+/* Estilo de los elementos resaltados en la información */
+.event-info span {
+    color: #FF0000;
+    font-weight: 400;
+}
+
+/* Contenedor de los enlaces del evento */
+.event-links {
+    padding: 10px;
+    background: #f8f8f8;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+/* Estilo de los enlaces */
+.event-links a {
+    background: transparent;
+    color: #000000;
+    border: 1px solid #000000;
+    padding: 8px 16px;
+    border-radius: 0;
+    font-size: 12px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    min-width: 90px;
+    text-align: center;
+}
+
+/* Efecto de fondo para los enlaces */
+.event-links a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: #000000;
+    transition: left 0.4s ease;
+    z-index: -1;
+}
+
+/* Efecto hover para los enlaces */
+.event-links a:hover::before {
+    left: 0;
+}
+
+/* Efecto hover para el color y borde de los enlaces */
+.event-links a:hover {
+    color: #ffffff;
+    border-color: #000000;
+}
+
+/* Sombra específica para el primer enlace en hover */
+.event-links a:nth-child(1):hover {
+    box-shadow: 0 0 0 2px #FFD700;
+}
+
+/* Sombra específica para el segundo enlace en hover */
+.event-links a:nth-child(2):hover {
+    box-shadow: 0 0 0 2px #FF0000;
+}
+
+/* Sombra específica para el tercer enlace en hover */
+.event-links a:nth-child(3):hover {
+    box-shadow: 0 0 0 2px #FFD700;
+}
+
+/* Pie de página minimalista */
+.footer-minimal {
+    text-align: center;
+    padding: 30px;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Texto del pie de página */
+.footer-minimal p {
+    font-size: 12px;
+    font-weight: 300;
+    color: #999999;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Contenedores de error y éxito */
+.error-container,
+.success-container {
+    text-align: center;
+    padding: 20px;
+    margin: 20px auto;
+    width: 90%;
+    border-radius: 4px;
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+/* Estilo del contenedor de error */
+.error-container {
+    border: 1px solid #FF0000;
+    background: #fff5f5;
+    color: #FF0000;
+}
+
+/* Estilo del contenedor de éxito */
+.success-container {
+    border: 1px solid #008000;
+    background: #f0fff0;
+    color: #008000;
+}
+
+/* Animación de entrada */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Media query para pantallas de hasta 768px */
+@media (max-width: 768px) {
+    /* Ajusta el encabezado */
+    .header {
+        padding: 20px 30px;
+        flex-direction: column;
+        gap: 15px;
+        height: auto;
+    }
+
+    /* Reposiciona los botones */
+    .admin-link,
+    .back-btn {
+        position: static;
+        width: 100%;
+        text-align: center;
+        padding: 8px 15px;
+        font-size: 12px;
+    }
+
+    /* Ajusta el título de la página */
+    .page-title {
+        font-size: 20px;
+        letter-spacing: 2px;
+    }
+
+    /* Ajusta el contenedor principal */
+    .main-content {
+        padding: 0;
+    }
+
+    /* Ajusta el contenedor de eventos */
+    .eventos-wrapper {
+        gap: 30px;
+        padding: 15px 0;
+    }
+
+    /* Ajusta el contenedor de cada evento */
+    .event-container {
+        width: 95%;
+        min-height: 300px;
+        padding: 15px 0 20px;
+    }
+
+    /* Ajusta el título del evento */
+    .event-title {
+        font-size: 18px;
+    }
+
+    /* Ajusta la imagen del evento */
+    .event-image img {
+        max-width: 400px;
+    }
+
+    /* Ajusta la información del evento */
+    .event-info {
+        max-width: 90%;
+    }
+
+    /* Ajusta los elementos de información */
+    .event-info > div {
+        font-size: 14px;
+    }
+
+    /* Ajusta el primer elemento de información */
+    .event-info > div:first-child {
+        font-size: 16px;
+        padding-left: 12px;
+    }
+
+    /* Ajusta el segundo y tercer elemento de información */
+    .event-info > div:nth-child(2),
+    .event-info > div:nth-child(3) {
+        font-size: 14px;
+    }
+
+    /* Ajusta el último elemento de información */
+    .event-info > div:last-child {
+        font-size: 12px;
+    }
+
+    /* Ajusta los enlaces */
+    .event-links {
+        gap: 10px;
+    }
+
+    /* Ajusta los botones de enlace */
+    .event-links a {
+        font-size: 11px;
+        padding: 6px 12px;
+        min-width: 80px;
+    }
+
+    /* Ajusta el mensaje de no eventos */
+    .no-eventos {
+        font-size: 16px;
+        padding: 40px 15px;
+    }
+
+    /* Ajusta los contenedores de error y éxito */
+    .error-container,
+    .success-container {
+        padding: 15px;
+        font-size: 12px;
+    }
+
+    /* Ajusta el pie de página */
+    .footer-minimal {
+        padding: 20px;
+    }
+}
+
+/* Media query para pantallas de hasta 480px */
+@media (max-width: 480px) {
+    /* Ajusta el encabezado */
+    .header {
+        padding: 15px 20px;
+        gap: 10px;
+    }
+
+    /* Ajusta los botones */
+    .admin-link,
+    .back-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    /* Ajusta el título de la página */
+    .page-title {
+        font-size: 18px;
+        letter-spacing: 1.5px;
+    }
+
+    /* Ajusta el contenedor de eventos */
+    .eventos-wrapper {
+        gap: 20px;
+        padding: 10px 0;
+    }
+
+    /* Ajusta el contenedor de cada evento */
+    .event-container {
+        width: 98%;
+        min-height: 250px;
+        padding: 10px 0 15px;
+    }
+
+    /* Ajusta el título del evento */
+    .event-title {
+        font-size: 16px;
+    }
+
+    /* Ajusta la imagen del evento */
+    .event-image img {
+        max-width: 300px;
+    }
+
+    /* Ajusta la información del evento */
+    .event-info {
+        max-width: 95%;
+    }
+
+    /* Ajusta los elementos de información */
+    .event-info > div {
+        font-size: 13px;
+        margin-bottom: 10px;
+    }
+
+    /* Ajusta el primer elemento de información */
+    .event-info > div:first-child {
+        font-size: 15px;
+        padding-left: 10px;
+    }
+
+    /* Ajusta el segundo y tercer elemento de información */
+    .event-info > div:nth-child(2),
+    .event-info > div:nth-child(3) {
+        font-size: 13px;
+    }
+
+    /* Ajusta el último elemento de información */
+    .event-info > div:last-child {
+        font-size: 11px;
+    }
+
+    /* Ajusta los enlaces */
+    .event-links {
+        gap: 8px;
+    }
+
+    /* Ajusta los botones de enlace */
+    .event-links a {
+        font-size: 10px;
+        padding: 5px 10px;
+        min-width: 70px;
+    }
+
+    /* Ajusta el mensaje de no eventos */
+    .no-eventos {
+        font-size: 14px;
+        padding: 30px 10px;
+    }
+
+    /* Ajusta los contenedores de error y éxito */
+    .error-container,
+    .success-container {
+        padding: 12px;
+        font-size: 11px;
+    }
+
+    /* Ajusta el pie de página */
+    .footer-minimal {
+        padding: 15px;
+    }
+
+    /* Ajusta el texto del pie de página */
+    .footer-minimal p {
+        font-size: 11px;
+    }
+}
+
+/* Media query para pantallas muy pequeñas (hasta 320px) */
+@media (max-width: 320px) {
+    /* Ajusta el encabezado */
+    .header {
+        padding: 10px 15px;
+        gap: 8px;
+    }
+
+    /* Ajusta los botones */
+    .admin-link,
+    .back-btn {
+        padding: 5px 10px;
+        font-size: 10px;
+    }
+
+    /* Ajusta el título de la página */
+    .page-title {
+        font-size: 16px;
+        letter-spacing: 1px;
+    }
+
+    /* Ajusta el contenedor de eventos */
+    .eventos-wrapper {
+        gap: 15px;
+        padding: 8px 0;
+    }
+
+    /* Ajusta el contenedor de cada evento */
+    .event-container {
+        width: 100%;
+        min-height: 200px;
+        padding: 8px 0 12px;
+    }
+
+    /* Ajusta el título del evento */
+    .event-title {
+        font-size: 14px;
+    }
+
+    /* Ajusta la imagen del evento */
+    .event-image img {
+        max-width: 250px;
+    }
+
+    /* Ajusta la información del evento */
+    .event-info {
+        max-width: 98%;
+    }
+
+    /* Ajusta los elementos de información */
+    .event-info > div {
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+
+    /* Ajusta el primer elemento de información */
+    .event-info > div:first-child {
+        font-size: 14px;
+        padding-left: 8px;
+    }
+
+    /* Ajusta el segundo y tercer elemento de información */
+    .event-info > div:nth-child(2),
+    .event-info > div:nth-child(3) {
+        font-size: 12px;
+    }
+
+    /* Ajusta el último elemento de información */
+    .event-info > div:last-child {
+        font-size: 10px;
+    }
+
+    /* Ajusta los enlaces */
+    .event-links {
+        gap: 6px;
+    }
+
+    /* Ajusta los botones de enlace */
+    .event-links a {
+        font-size: 9px;
+        padding: 4px 8px;
+        min-width: 60px;
+    }
+
+    /* Ajusta el mensaje de no eventos */
+    .no-eventos {
+        font-size: 13px;
+        padding: 20px 8px;
+    }
+
+    /* Ajusta los contenedores de error y éxito */
+    .error-container,
+    .success-container {
+        padding: 10px;
+        font-size: 10px;
+    }
+
+    /* Ajusta el pie de página */
+    .footer-minimal {
+        padding: 10px;
+    }
+
+    /* Ajusta el texto del pie de página */
+    .footer-minimal p {
+        font-size: 10px;
+    }
+}

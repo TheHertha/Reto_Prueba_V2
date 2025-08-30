@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Recetas y Guías - CAT 21</title>
+    <link rel="stylesheet" href="assets/css/inicio.css">
+    <style>
+/* Reinicia márgenes, paddings y configura box-sizing para consistencia */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Configura el cuerpo de la página con fuente moderna y altura mínima */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #ffffff;
+    color: #000000;
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+/* Encabezado con disposición flexible y fondo oscuro */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background-color: #000000;
+    height: 80px;
+    position: relative;
+}
+
+/* Logo en el encabezado */
+.logo {
+    height: 60px;
+    width: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-right: 20px;
+}
+
+/* Título centrado en el encabezado */
+.title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    text-transform: uppercase;
+    font-size: 24px;
+    letter-spacing: 2px;
+}
+
+/* Contenedor de los botones en la derecha del encabezado */
+.header-right {
+    display: flex;
+    gap: 15px;
+}
+
+/* Estilo de los botones de perfil y cerrar sesión */
+.profile-btn,
+.logout-btn {
+    background: transparent;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+/* Efecto hover para los botones de perfil y cerrar sesión */
+.profile-btn:hover,
+.logout-btn:hover {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+/* Contenedor de la navegación */
+.navigation {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 40px 0;
+}
+
+/* Estilo de los botones de navegación */
+.nav-btn {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid black;
+    padding: 14px 28px;
+    text-transform: uppercase;
+    background: transparent;
+    color: #000;
+    text-decoration: none;
+    transition: color 0.4s ease;
+}
+
+/* Efecto de fondo para los botones de navegación */
+.nav-btn::before {
+    content: "";
+    position: absolute;
+    left: -100%;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background-color: black;
+    z-index: 0;
+    transition: left 0.4s ease;
+}
+
+/* Efecto hover para el fondo de los botones de navegación */
+.nav-btn:hover::before {
+    left: 0;
+}
+
+/* Efecto hover para el color del texto en los botones de navegación */
+.nav-btn:hover {
+    color: white;
+}
+
+/* Contenido de los botones de navegación */
+.nav-btn span {
+    position: relative;
+    z-index: 1;
+}
+
+/* Contenedor del carrusel (renombrado internamente como contenedor de boxes, ya que no es un carrusel real) */
+.carousel-container {
+    margin: 40px auto;
+    max-width: 90%;
+    background: #f8f8f8;
+    border: 1px solid #33333300;
+    border-radius: 8px;
+    overflow: visible; /* Cambiado a visible para permitir scroll de página y evitar recortes */
+    padding: 20px; /* Añadido padding para mejor espaciado en mobile */
+}
+
+/* Pie de página minimalista */
+.footer-minimal {
+    text-align: center;
+    padding: 30px;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 30px;
+}
+
+/* Fondos personalizados para los primeros 3 slides del carrusel */
+.carousel-slide.slide1 {
+    background-image: url('assets/img/AF1.png');
+    background-size: cover;
+    background-position: center;
+}
+.carousel-slide.slide2 {
+    background-image: url('assets/img/img2.png');
+    background-size: cover;
+    background-position: center;
+}
+.carousel-slide.slide3 {
+    background-image: url('assets/img/img3.png');
+    background-size: cover;
+    background-position: center;
+}
+
+.carousel-slide.slide4 {
+    background-image: url('assets/img/img4.png');
+    background-size: cover;
+    background-position: center;
+}
+.carousel-slide.slide5 {
+    background-image: url('assets/img/img5.png');
+    background-size: cover;
+    background-position: center;
+}
+
+/* Texto blanco para el contenido de los slides del carrusel */
+.carousel-slide .slide-content,
+.carousel-slide .slide-title,
+.carousel-slide .slide-subtitle {
+    color: #fff;
+    text-shadow: 1px 1px 8px rgba(0,0,0,0.5);
+}
+
+/* Texto del pie de página */
+.footer-minimal p {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+}
+
+/* ESTILOS ORIGINALES DE LAS CAJAS PDF */
+.pdf-boxes-container {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 32px;
+    flex-wrap: wrap;
+}
+
+.pdf-box {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 28px 20px 20px 20px;
+    max-width: 320px;
+    min-width: 240px;
+    flex: 1 1 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.2s;
+    text-align: center;
+    position: relative;
+}
+
+.pdf-box:hover {
+    box-shadow: 0 8px 32px rgba(237,86,59,0.18);
+    transform: translateY(-6px) scale(1.03);
+}
+
+/* Contenedor de imagen/preview */
+.pdf-preview-container {
+    width: 100%;
+    max-width: 180px;
+    height: 120px;
+    border-radius: 10px;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+}
+
+.pdf-box-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.pdf-preview {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 10px;
+    background: #f8f9fa;
+    display: none;
+}
+
+.pdf-box-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ed563b;
+    margin-bottom: 10px;
+}
+
+.pdf-box-desc {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 18px;
+}
+
+/* Contenedor de botones */
+.pdf-box-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pdf-box-btn {
+    background: linear-gradient(90deg, #ed563b 0%, #ff6b47 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    min-width: 120px; /* Añadido para botones más touch-friendly en mobile */
+}
+
+.pdf-box-btn:hover {
+    background: linear-gradient(90deg, #ff6b47 0%, #ed563b 100%);
+}
+
+.pdf-box-btn.secondary {
+    background: transparent;
+    color: #ed563b;
+    border: 2px solid #ed563b;
+}
+
+.pdf-box-btn.secondary:hover {
+    background: #ed563b;
+    color: white;
+}
+
+/* Modal para el visor de PDF */
+.pdf-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.pdf-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.pdf-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    height: 90%;
+    max-width: 1000px;
+    max-height: 800px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: scale(0.8) translateY(50px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.pdf-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+}
+
+.pdf-modal-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.close-modal {
+    background: #ed563b;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.close-modal:hover {
+    background: #d64527;
+}
+
+.pdf-viewer {
+    flex: 1;
+    padding: 20px;
+    overflow: auto; /* Cambiado a auto para mejor scroll en mobile */
+}
+
+.pdf-viewer iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 8px;
+}
+
+/* Media query para pantallas de hasta 768px (tablets y móviles grandes) */
+@media (max-width: 768px) {
+    /* Ajusta el encabezado */
+    .header {
+        padding: 10px 20px;
+        height: 70px;
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
+
+    /* Reduce el tamaño del logo */
+    .logo {
+        height: 50px;
+        width: 50px;
+        margin-right: 10px;
+    }
+
+    /* Ajusta el título */
+    .title {
+        position: static;
+        transform: none;
+        font-size: 20px;
+        letter-spacing: 1.5px;
+        text-align: center;
+        flex: 1;
+    }
+
+    /* Reduce el espacio entre los botones del encabezado */
+    .header-right {
+        gap: 10px;
+    }
+
+    /* Ajusta los botones de perfil y cerrar sesión */
+    .profile-btn,
+    .logout-btn {
+        padding: 8px 15px;
+        font-size: 12px;
+    }
+
+    /* Navegación en columna */
+    .navigation {
+        flex-direction: column;
+        gap: 15px;
+        margin: 30px 0;
+    }
+
+    /* Ajusta los botones de navegación */
+    .nav-btn {
+        padding: 12px 24px;
+        font-size: 13px;
+    }
+
+    /* Ajusta el contenedor */
+    .carousel-container {
+        max-width: 95%;
+        padding: 15px;
+        overflow: visible; /* Asegura visibilidad y scroll */
+    }
+
+    /* Ajusta el pie de página */
+    .footer-minimal {
+        padding: 20px;
+    }
+
+    /* Ajustes para las cajas PDF */
+    .pdf-boxes-container { 
+        flex-direction: column; 
+        align-items: center; 
+        gap: 24px; 
+    }
+    
+    .pdf-box { 
+        max-width: 95vw; 
+        min-width: unset; /* Para mejor fluidez */
+    }
+
+    .pdf-modal-content {
+        width: 95%;
+        height: 95%;
+    }
+}
+
+/* Media query para pantallas de hasta 480px (móviles estándar) */
+@media (max-width: 480px) {
+    /* Ajusta el encabezado */
+    .header {
+        padding: 8px 15px;
+        height: auto;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Reduce el tamaño del logo */
+    .logo {
+        height: 40px;
+        width: 40px;
+        margin-right: 0;
+    }
+
+    /* Ajusta el título */
+    .title {
+        font-size: 18px;
+        letter-spacing: 1px;
+        margin: 5px 0;
+    }
+
+    /* Ajusta los botones del encabezado */
+    .header-right {
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    /* Reduce el tamaño de los botones */
+    .profile-btn,
+    .logout-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    /* Ajusta la navegación */
+    .navigation {
+        margin: 20px 0;
+        gap: 10px;
+    }
+
+    /* Reduce el tamaño de los botones de navegación */
+    .nav-btn {
+        padding: 10px 20px;
+        font-size: 12px;
+    }
+
+    /* Ajusta el contenedor */
+    .carousel-container {
+        max-width: 100%;
+        padding: 10px;
+        overflow: visible; /* Asegura visibilidad y scroll */
+    }
+
+    /* Ajusta el pie de página */
+    .footer-minimal {
+        padding: 15px;
+    }
+
+    /* Reduce el texto del pie */
+    .footer-minimal p {
+        font-size: 11px;
+    }
+
+    /* Ajustes para móvil en las cajas PDF */
+    .pdf-box-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .pdf-box-btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 1rem; /* Aumentado para mejor touch */
+    }
+
+    .pdf-modal-header {
+        padding: 15px;
+    }
+
+    .pdf-viewer {
+        padding: 15px;
+    }
+
+    .pdf-modal-content {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        max-height: none; /* Para usar toda la pantalla */
+    }
+
+    .pdf-viewer {
+        padding: 0;
+        overflow: hidden; /* Evita scroll extra */
+    }
+
+    .pdf-viewer iframe {
+        min-height: calc(100vh - 60px); /* Ajuste para header del modal */
+    }
+
+    .pdf-box {
+        max-width: 95%;
+        padding: 20px 15px; /* Reducido padding para más espacio */
+    }
+
+    .pdf-preview-container {
+        max-width: 150px; /* Ajuste para pantallas pequeñas */
+        height: 100px;
+    }
+
+    .pdf-box-title {
+        font-size: 1.1rem;
+    }
+
+    .pdf-box-desc {
+        font-size: 0.9rem;
+    }
+}
+
+/* Media query para pantallas muy pequeñas (hasta 320px) */
+@media (max-width: 320px) {
+    /* Ajusta el encabezado */
+    .header {
+        padding: 6px 10px;
+        gap: 8px;
+    }
+
+    /* Reduce el logo */
+    .logo {
+        height: 35px;
+        width: 35px;
+    }
+
+    /* Ajusta el título */
+    .title {
+        font-size: 16px;
+        letter-spacing: 0.8px;
+    }
+
+    /* Reduce espacio botones */
+    .header-right {
+        gap: 6px;
+    }
+
+    /* Reduce botones */
+    .profile-btn,
+    .logout-btn {
+        padding: 5px 10px;
+        font-size: 10px;
+    }
+
+    /* Ajusta navegación */
+    .navigation {
+        margin: 15px 0;
+        gap: 8px;
+    }
+
+    /* Reduce botones nav */
+    .nav-btn {
+        padding: 8px 16px;
+        font-size: 11px;
+    }
+
+    /* Ajusta contenedor */
+    .carousel-container {
+        padding: 5px;
+        overflow: visible;
+    }
+
+    /* Ajusta footer */
+    .footer-minimal {
+        padding: 10px;
+    }
+
+    /* Reduce texto footer */
+    .footer-minimal p {
+        font-size: 10px;
+    }
+
+    .pdf-box-title {
+        font-size: 1rem;
+    }
+
+    .pdf-box-desc {
+        font-size: 0.8rem;
+    }
+
+    .pdf-preview-container {
+        max-width: 120px;
+        height: 80px;
+    }
+}
+
+    </style>
+</head>
+<body>
+<header class="header">
+    <div style="display: flex; align-items: center;">
+        <img src="assets/img/1-4.png" alt="Logo" class="logo"> 
+    </div>
+    <h1 class="title">Recetas y Guías</h1>
+    <div class="header-right">
+        <a class="profile-btn" href="register.php">Registrarse</a>
+        <a class="logout-btn" href="sesion_inicio.php">Iniciar Sesion</a>
+    </div>
+</header>
+
+<nav class="navigation">
+    <a class="nav-btn" href="sesion_inicio.php"><span>Inicia Sesión o Regístrate para ver más</span></a>
+</nav>
+
+<div class="carousel-container">
+    <div class="pdf-boxes-container">
+        <div class="pdf-box" data-pdf="recetas" data-title="Recetario Saludable">
+            <div class="pdf-preview-container">
+                <img src="https://drive.google.com/uc?id=1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ" alt="Recetario 1" class="pdf-box-img">
+                <iframe class="pdf-preview" src="https://drive.google.com/file/d/1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ/preview"></iframe>
+            </div>
+            <h3 class="pdf-box-title">Recetario Saludable</h3>
+            <p class="pdf-box-desc">Descarga o visualiza recetas fáciles y nutritivas para tu día a día.</p>
+            <div class="pdf-box-buttons">
+                <button class="pdf-box-btn" onclick="openPdfModal('recetas', 'Recetario Saludable')">Ver PDF</button>
+                <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ&export=download" download>Descargar</a>
+            </div>
+        </div>
+        
+        <div class="pdf-box" data-pdf="habitos" data-title="Guía de Hábitos">
+            <div class="pdf-preview-container">
+                <img src="https://drive.google.com/uc?id=1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ" alt="Guía de Hábitos" class="pdf-box-img">
+                <iframe class="pdf-preview" src="https://drive.google.com/file/d/1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ/preview"></iframe>
+            </div>
+            <h3 class="pdf-box-title">Guía de Hábitos</h3>
+            <p class="pdf-box-desc">Aprende a crear hábitos saludables y sostenibles con esta guía práctica.</p>
+            <div class="pdf-box-buttons">
+                <button class="pdf-box-btn" onclick="openPdfModal('habitos', 'Guía de Hábitos')">Ver PDF</button>
+                <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ&export=download" download>Descargar</a>
+            </div>
+        </div>
+        
+        <div class="pdf-box" data-pdf="entrenamiento" data-title="Plan de Entrenamiento">
+            <div class="pdf-preview-container">
+                <img src="https://drive.google.com/uc?id=1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ" alt="Plan de Entrenamiento" class="pdf-box-img">
+                <iframe class="pdf-preview" src="https://drive.google.com/file/d/1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ/preview"></iframe>
+            </div>
+            <h3 class="pdf-box-title">Plan de Entrenamiento</h3>
+            <p class="pdf-box-desc">Rutinas y ejercicios para todos los niveles, ¡ponte en forma!</p>
+            <div class="pdf-box-buttons">
+                <button class="pdf-box-btn" onclick="openPdfModal('entrenamiento', 'Plan de Entrenamiento')">Ver PDF</button>
+                <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ&export=download" download>Descargar</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para visor de PDF -->
+<div class="pdf-modal" id="pdfModal">
+    <div class="pdf-modal-content">
+        <div class="pdf-modal-header">
+            <h2 class="pdf-modal-title" id="modalTitle">Visualizador de PDF</h2>
+            <button class="close-modal" onclick="closePdfModal()">✕</button>
+        </div>
+        <div class="pdf-viewer">
+            <iframe id="pdfViewer" src=""></iframe>
+        </div>
+    </div>
+</div>
+
+<div class="footer-minimal">
+    <p>CAT 21</p>
+</div>
+
+<script>
+// URLs de PDFs en Google Drive (reemplaza los FILE_ID con los reales de tus archivos compartidos públicamente)
+const pdfUrls = {
+    'recetas': 'https://drive.google.com/file/d/1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ/preview',
+    'habitos': 'https://drive.google.com/file/d/1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ/preview',
+    'entrenamiento': 'https://drive.google.com/file/d/1U9hq_SklldHqDwQkz7Zj87Pl428CzMEZ/preview'
+};
+
+
+// Función para abrir el modal con PDF
+function openPdfModal(pdfKey, title) {
+    const modal = document.getElementById('pdfModal');
+    const viewer = document.getElementById('pdfViewer');
+    const titleElement = document.getElementById('modalTitle');
+    
+    titleElement.textContent = title;
+    viewer.src = pdfUrls[pdfKey];
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// Función para cerrar el modal
+function closePdfModal() {
+    const modal = document.getElementById('pdfModal');
+    const viewer = document.getElementById('pdfViewer');
+    
+    modal.classList.remove('active');
+    viewer.src = '';
+    document.body.style.overflow = 'auto';
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar previsualizaciones después de un tiempo (ajustado para Google Drive)
+    setTimeout(() => {
+        const previews = document.querySelectorAll('.pdf-preview');
+        previews.forEach((preview) => {
+            preview.onload = () => {
+                preview.style.display = 'block';
+                preview.previousElementSibling.style.display = 'none';
+            };
+        });
+    }, 2000);
+    
+    // Cerrar modal con ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePdfModal();
+        }
+    });
+    
+    // Cerrar modal haciendo clic fuera del contenido
+    document.getElementById('pdfModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePdfModal();
+        }
+    });
+});
+</script>
+
+<script src="assets/js/script.js"></script>
+</body>
+</html>

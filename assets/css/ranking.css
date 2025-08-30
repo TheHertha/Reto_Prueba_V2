@@ -1,0 +1,623 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #ffffff;
+    color: #000000;
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+.header {
+    background: #000000;
+    padding: 30px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    border-bottom: 1px solid #333333;
+}
+
+.back-btn, .admin-btn {
+    background: transparent;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.back-btn:hover, .admin-btn:hover {
+    background: #ffffff;
+    color: #000000;
+    box-shadow: 0 0 0 2px #FFC107;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 300;
+    color: #ffffff;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    flex-grow: 1;
+    text-align: center;
+}
+
+.main-content {
+    padding: 40px;
+    animation: fadeIn 0.8s ease-out;
+}
+
+.selector-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.selector-reto {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #000000;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    min-width: 280px;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.selector-reto:hover {
+    background: #000000;
+    color: #ffffff;
+    box-shadow: 0 0 0 2px #FFC107;
+}
+
+.selector-reto option {
+    background: #ffffff;
+    color: #000000;
+}
+
+.mensaje {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 300;
+    color: #000000;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+    padding: 20px;
+    border: 1px solid #333333;
+    background: #f8f8f8;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.mensaje::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #FFC107, #FF0000, #FFC107);
+}
+
+.podio-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 30px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+
+.puesto-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.4s ease;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff, #f8f8f8);
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.puesto-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.card-content {
+    width: 100%;
+    padding: 25px;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+
+.rank-badge {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 400;
+    color: #ffffff;
+    margin: 0 auto 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    display: block;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.nombre {
+    font-size: 26px;
+    font-weight: 500;
+    color: #000000;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    position: relative;
+}
+
+.nombre::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+}
+
+.apellido {
+    color: #FF0000;
+    font-weight: 400;
+}
+
+.numero-container {
+    margin: 15px 0;
+}
+
+.caja-numero {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 300;
+    color: #ffffff;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.valor {
+    font-size: 28px;
+    font-weight: 100;
+    color: #000000;
+    letter-spacing: 2px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    margin-top: 15px;
+    background: #f8f8f8;
+}
+
+.primero {
+    order: 2;
+    border: 2px solid transparent;
+    background: linear-gradient(180deg, #ffffff, #f8f8f8), linear-gradient(90deg, #FFC107, #F59E0B);
+    background-clip: padding-box, border-box;
+    background-origin: padding-box, border-box;
+}
+
+.primero .rank-badge {
+    background: #FFC107;
+    color: #000000;
+}
+
+.primero .caja-numero {
+    background: #FFC107;
+    color: #000000;
+}
+
+.primero .valor {
+    border: 1px solid #FFC107;
+    background: #FFF8E1;
+}
+
+.primero .nombre::after {
+    background: #FFC107;
+}
+
+.segundo {
+    order: 1;
+    border: 2px solid transparent;
+    background: linear-gradient(180deg, #ffffff, #f8f8f8), linear-gradient(90deg, #B0BEC5, #78909C);
+    background-clip: padding-box, border-box;
+    background-origin: padding-box, border-box;
+}
+
+.segundo .rank-badge {
+    background: #B0BEC5;
+    color: #000000;
+}
+
+.segundo .caja-numero {
+    background: #B0BEC5;
+    color: #000000;
+}
+
+.segundo .valor {
+    border: 1px solid #B0BEC5;
+    background: #ECEFF1;
+}
+
+.segundo .nombre::after {
+    background: #B0BEC5;
+}
+
+.tercero {
+    order: 3;
+    border: 2px solid transparent;
+    background: linear-gradient(180deg, #ffffff, #f8f8f8), linear-gradient(90deg, #D84315, #BF360C);
+    background-clip: padding-box, border-box;
+    background-origin: padding-box, border-box;
+}
+
+.tercero .rank-badge {
+    background: #D84315;
+    color: #ffffff;
+}
+
+.tercero .caja-numero {
+    background: #D84315;
+    color: #ffffff;
+}
+
+.tercero .valor {
+    border: 1px solid #D84315;
+    background: #FBE9E7;
+}
+
+.tercero .nombre::after {
+    background: #D84315;
+}
+
+.sin-datos {
+    opacity: 0.7;
+    border: 2px solid #757575;
+}
+
+.sin-datos .rank-badge {
+    background: #757575;
+}
+
+.sin-datos .caja-numero {
+    background: #757575;
+}
+
+.sin-datos .valor {
+    border: 1px solid #757575;
+    background: #E0E0E0;
+}
+
+.sin-datos .nombre::after {
+    background: #757575;
+}
+
+.error-container, .success-container {
+    text-align: center;
+    padding: 20px;
+    border: 1px solid #FF0000;
+    background: #fff5f5;
+    color: #FF0000;
+    font-weight: 400;
+    letter-spacing: 1px;
+    margin-top: 30px;
+    border-radius: 4px;
+}
+
+.success-container {
+    border-color: #008000;
+    background: #f0fff0;
+    color: #008000;
+}
+
+.footer-minimal {
+    text-align: center;
+    padding: 30px;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 30px;
+}
+
+.footer-minimal p {
+    font-size: 12px;
+    font-weight: 300;
+    color: #999999;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.hidden {
+    display: none;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 1024px) {
+    .header {
+        padding: 25px 40px;
+    }
+
+    .title {
+        font-size: 24px;
+    }
+
+    .main-content {
+        padding: 30px;
+    }
+
+    .podio-container {
+        gap: 20px;
+    }
+
+    .puesto-card {
+        max-width: 450px;
+    }
+}
+
+@media (max-width: 768px) {
+    .header {
+        padding: 20px 30px;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .back-btn, .admin-btn {
+        width: 100%;
+        max-width: 300px;
+        text-align: center;
+        padding: 8px 16px;
+        font-size: 12px;
+    }
+
+    .title {
+        font-size: 20px;
+        letter-spacing: 2px;
+    }
+
+    .main-content {
+        padding: 25px;
+    }
+
+    .selector-container {
+        margin-bottom: 30px;
+    }
+
+    .selector-reto {
+        min-width: 240px;
+        padding: 10px 20px;
+        font-size: 12px;
+    }
+
+    .mensaje {
+        font-size: 18px;
+        padding: 15px;
+    }
+
+    .podio-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .puesto-card {
+        max-width: 400px;
+    }
+
+    .primero {
+        order: 1;
+    }
+
+    .segundo {
+        order: 2;
+    }
+
+    .tercero {
+        order: 3;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        padding: 15px 20px;
+    }
+
+    .back-btn, .admin-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+
+    .main-content {
+        padding: 20px;
+    }
+
+    .selector-container {
+        margin-bottom: 20px;
+    }
+
+    .selector-reto {
+        min-width: 200px;
+        padding: 8px 16px;
+        font-size: 11px;
+    }
+
+    .mensaje {
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    .podio-container {
+        gap: 15px;
+    }
+
+    .puesto-card {
+        max-width: 350px;
+    }
+
+    .card-content {
+        padding: 20px;
+    }
+
+    .card-icon {
+        font-size: 40px;
+    }
+
+    .nombre {
+        font-size: 22px;
+    }
+
+    .caja-numero {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+
+    .valor {
+        font-size: 24px;
+        padding: 10px 15px;
+    }
+
+    .rank-badge {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 320px) {
+    .header {
+        padding: 10px 15px;
+    }
+
+    .back-btn, .admin-btn {
+        padding: 5px 10px;
+        font-size: 10px;
+    }
+
+    .title {
+        font-size: 16px;
+        letter-spacing: 1px;
+    }
+
+    .main-content {
+        padding: 15px;
+    }
+
+    .selector-container {
+        margin-bottom: 15px;
+    }
+
+    .selector-reto {
+        min-width: 180px;
+        padding: 6px 12px;
+        font-size: 10px;
+    }
+
+    .mensaje {
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    .podio-container {
+        gap: 10px;
+    }
+
+    .puesto-card {
+        max-width: 300px;
+    }
+
+    .card-content {
+        padding: 15px;
+    }
+
+    .card-icon {
+        font-size: 36px;
+    }
+
+    .nombre {
+        font-size: 18px;
+    }
+
+    .caja-numero {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+
+    .valor {
+        font-size: 20px;
+        padding: 8px 12px;
+    }
+
+    .rank-badge {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

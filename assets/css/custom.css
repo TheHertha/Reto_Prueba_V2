@@ -1,0 +1,403 @@
+.podio-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-end !important;
+  gap: 40px !important;
+  margin-top: 50px !important;
+}
+
+.puesto {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.medalla {
+  width: 100px !important;
+  height: 100px !important;
+  border-radius: 50% !important;
+  font-weight: bold !important;
+  font-size: 24px !important;
+  color: white !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin-bottom: 10px !important;
+}
+
+.medalla.oro {
+  background-color: gold !important;
+}
+
+.medalla.plata {
+  background-color: silver !important;
+  color: black !important;
+}
+
+.medalla.bronce {
+  background-color: #cd7f32 !important;
+}
+
+.base {
+  width: 100px !important;
+  background-color: #444 !important;
+  color: white !important;
+  font-weight: bold !important;
+  padding: 10px !important;
+  border-radius: 8px 8px 0 0 !important;
+  text-align: center !important;
+}
+
+.base.oro {
+  height: 130px !important;
+  background-color: gold !important;
+  color: black !important;
+}
+
+.base.plata {
+  height: 100px !important;
+  background-color: silver !important;
+  color: black !important;
+}
+
+.base.bronce {
+  height: 80px !important;
+  background-color: #cd7f32 !important;
+}
+
+.nombre {
+  margin-top: 10px !important;
+  font-weight: bold !important;
+}
+
+
+
+
+
+
+
+
+.testimonios {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+  gap: 30px !important;
+  justify-items: center !important;
+  margin-top: 30px !important;
+}
+
+.testimonio {
+  width: 100% !important;
+  max-width: 320px !important;
+  text-align: center !important;
+}
+
+.testimonio video {
+  width: 100% !important;
+  border-radius: 12px !important;
+  background-color: #000 !important;
+}
+
+.testimonio .nombre {
+  margin-top: 10px !important;
+  font-weight: 700 !important;
+  color: #222 !important;
+}
+
+.testimonio .descripcion {
+  font-size: 14px !important;
+  color: #555 !important;
+  margin-top: 5px !important;
+}
+
+.testimonio .descripcion strong {
+  color: #000 !important;
+}
+
+
+
+
+.grid-facilitadores {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+  gap: 40px !important;
+  justify-items: center !important;
+  margin-top: 40px !important;
+  text-align: center !important;
+}
+
+.facilitador {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  max-width: 300px !important;
+}
+
+.facilitador img {
+  width: 100% !important;
+  border-radius: 15px !important;
+  object-fit: cover !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.15) !important;
+  margin-bottom: 10px !important;
+}
+
+.facilitador .texto h3 {
+  font-size: 18px !important;
+  margin-bottom: 8px !important;
+  font-weight: 600 !important;
+}
+
+.facilitador .texto p {
+  font-size: 14px !important;
+  color: #333 !important;
+  line-height: 1.5 !important;
+}
+
+
+
+
+/* 🔴 CONTENEDOR GENERAL ROJO CLARO */
+.box-container {
+  background-color: #f6cc27 !important;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 40px;
+}
+
+/* 🎯 CENTRAR TÍTULOS */
+.box-container h2,
+.box-container .section-tittle2 h2 {
+  text-align: center !important;
+}
+
+/* 🧱 Para que grid-facilitadores mantenga 3 en una fila si cabe */
+.grid-facilitadores {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+  gap: 40px !important;
+  justify-items: center !important;
+  text-align: center !important;
+}
+
+/* Limita el ancho de los contenedores principales */
+.container, .box-container {
+  max-width: 1400px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 90% !important;
+}
+
+
+
+
+
+
+
+.btn-rojo {
+  background-color: #FF4D4D !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 40px !important; /* horizontal más ancho */
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  display: inline-block !important;
+  transition: background-color 0.3s ease !important;
+  min-width: 150px !important; /* se asegura de que no sea demasiado delgado */
+  text-align: center !important;
+}
+
+.btn-rojo:hover {
+  background-color: #c61f22 !important;
+  color: white
+}
+
+
+
+.btn-rojo {
+  background-color: #FF4D4D;
+  color: white;
+  border: none;
+  padding: 6px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+  transition: background-color 0.3s ease;
+  width: auto;
+  text-align: center;
+}
+.btn-rojo:hover {
+  background-color: #e43e3e;
+}
+
+.hero__caption h4 {
+  font-size: 2.8rem !important;
+  line-height: 1.1 !important;
+}
+
+.hero__caption h5 {
+  font-size: 2.1rem !important;
+  line-height: 1.1 !important;
+}
+
+
+
+
+/* Más separación entre contenedores principales */
+.container,
+.box-container {
+  margin-bottom: 60px !important;
+}
+
+
+html body, body {
+  background-color: #000000 !important;
+}
+
+
+.cat-icon img {
+    width: 40px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+/* Centrar y espaciar los íconos de la sección de incluye */
+.incluye-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px 60px;
+  margin-bottom: 40px;
+}
+
+.single-cat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 220px;
+}
+
+.cat-icon img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin-bottom: 18px;
+}
+
+
+/* Enlace al panel de administración */
+.admin-link {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #b30000; /* Rojo fuerte */
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(255, 0, 0, 0.4);
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.admin-link:hover {
+    background-color: #ff1a1a; /* Rojo más brillante al pasar el mouse */
+    transform: scale(1.05);
+}
+
+.eventos-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+/* Título principal de la página */
+.page-title {
+    text-align: center;
+    font-size: 3em;
+    color: #ffcc00; /* Amarillo vibrante */
+    margin-bottom: 40px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-weight: bold;
+}
+
+/* Texto cuando no hay eventos */
+.no-eventos {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.5em;
+    color: #cccccc;
+    background-color: rgba(255, 204, 0, 0.1);
+    border: 1px dashed #ffcc00;
+    border-radius: 8px;
+}
+
+/* Contenedor individual del evento */
+.event-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 2px solid #ffcc00;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 6px 12px rgba(255, 204, 0, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.event-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(255, 204, 0, 0.5);
+}
+
+/* Título de cada evento */
+.event-title {
+    font-size: 2em;
+    color: #ff1a1a; /* Rojo brillante */
+    text-align: center;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+/* Imagen del evento */
+.event-image img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 2px solid #b30000;
+}
+
+/* Información del evento */
+.event-info {
+    margin-top: 15px;
+    color: #f0f0f0;
+    font-size: 1.1em;
+    line-height: 1.5em;
+}
+
+/* Enlaces de plataformas */
+.event-links {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.event-links a {
+    background-color: #ffcc00; /* Amarillo */
+    color: #000000;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.event-links a:hover {
+    background-color: #b30000; /* Rojo fuerte */
+    color: #ffffff;
+}

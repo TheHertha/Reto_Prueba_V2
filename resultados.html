@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados - Reto 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+        }
+        .accent-red {
+            background: linear-gradient(45deg, #dc2626, #ef4444);
+        }
+        .accent-yellow {
+            background: linear-gradient(45deg, #f59e0b, #fbbf24);
+        }
+        .form-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+        .hover-scale:hover {
+            transform: scale(1.02);
+            transition: all 0.2s ease;
+        }
+        .table-row:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .table-row:hover {
+            background-color: #fef3c7 !important;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+        .progress-bar {
+            height: 6px;
+            background: linear-gradient(90deg, #dc2626, #f59e0b);
+            border-radius: 3px;
+        }
+        .status-positive {
+            color: #059669;
+            font-weight: bold;
+        }
+        .status-negative {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .status-neutral {
+            color: #6b7280;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen font-sans">
+    <header class="bg-black border-b-2 border-red-600 text-white p-6 shadow-2xl">
+        <div class="container mx-auto flex justify-between items-center">
+            <button onclick="history.back()" class="bg-white text-black font-bold py-3 px-6 rounded-lg hover:bg-gray-200 transition-all duration-200 hover-scale">
+                ← Regresar
+            </button>
+            <h1 class="text-3xl font-black tracking-wide">RESULTADOS <span class="text-red-500">CAT21</span></h1>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-6">
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-6 border-l-4 border-yellow-400 pl-4">AVANCES SEMANA 3</h2>
+            <div class="bg-white rounded-xl form-shadow overflow-hidden hover-scale">
+                <div class="bg-black p-4">
+                    <div class="progress-bar rounded-full"></div>
+                </div>
+                <div id="resultados" class="p-8 overflow-x-auto"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-black border-t-2 border-red-600 text-white text-center p-6 mt-12">
+        <p class="font-semibold">© 2025 <span class="text-red-500">CAT21</span> - Todos los derechos reservados</p>
+    </footer>
+
+    <script>
+        function getStatusClass(value) {
+            if (!isFinite(value) || value === 'N/A') return 'status-neutral';
+            const num = Number(value);
+            if (num > 0) return 'status-positive';
+            if (num < 0) return 'status-negative';
+            return 'status-neutral';
+        }
+
+        function formatValue(value) {
+            if (!isFinite(value)) return 'N/A';
+            const num = Number(value);
+            return num > 0 ? `+${num.toFixed(2)}%` : `${num.toFixed(2)}%`;
+        }
+
+        async function loadResultados() {
+            const resultadosDiv = document.getElementById('resultados');
+            const dataUrl = 'calcular_avances_reto.php';
+            
+            // Loading state
+            resultadosDiv.innerHTML = `
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-red-500 border-t-transparent"></div>
+                    <span class="ml-4 text-xl font-semibold">Cargando resultados...</span>
+                </div>
+            `;
+
+            try {
+                console.log('Intentando cargar resultados desde:', dataUrl);
+                const response = await fetch(dataUrl);
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Respuesta no válida de calcular_avances_reto.php:', text);
+                    resultadosDiv.innerHTML = `
+                        <div class="bg-red-100 border-l-4 border-red-600 p-6 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-8 w-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-lg font-bold text-red-800">Error al cargar resultados</h3>
+                                    <p class="text-red-700">HTTP ${response.status} ${response.statusText}</p>
+                                    <p class="text-sm text-red-600 mt-2">${text.substring(0, 200)}...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Contenido no es JSON:', text);
+                    resultadosDiv.innerHTML = `
+                        <div class="bg-red-100 border-l-4 border-red-600 p-6 rounded-lg">
+                            <h3 class="text-lg font-bold text-red-800">Error de formato</h3>
+                            <p class="text-red-700">La respuesta del servidor no es JSON</p>
+                            <p class="text-sm text-red-600 mt-2">${text.substring(0, 100)}...</p>
+                        </div>
+                    `;
+                    throw new Error('La respuesta del servidor no es JSON');
+                }
+
+                const resultados = await response.json();
+                console.log('Datos recibidos de calcular_avances_reto.php:', resultados);
+
+                if (resultados.error) {
+                    resultadosDiv.innerHTML = `
+                        <div class="bg-red-100 border-l-4 border-red-600 p-6 rounded-lg">
+                            <h3 class="text-lg font-bold text-red-800">Error del servidor</h3>
+                            <p class="text-red-700">${resultados.error} - ${resultados.message}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (!resultados.length) {
+                    resultadosDiv.innerHTML = `
+                        <div class="bg-yellow-100 border-l-4 border-yellow-400 p-6 rounded-lg text-center">
+                            <div class="flex items-center justify-center">
+                                <svg class="h-12 w-12 text-yellow-600 mr-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                <div>
+                                    <h3 class="text-xl font-bold text-yellow-800">Sin datos disponibles</h3>
+                                    <p class="text-yellow-700 mt-2">No hay datos disponibles para mostrar avances.<br>Asegúrate de que existan datos para la Semana Inicial y la Semana 3.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse bg-white rounded-lg overflow-hidden">
+                            <thead>
+                                <tr class="bg-black text-white">
+                                    <th class="border border-gray-300 p-4 text-left font-bold">ID Usuario</th>
+                                    <th class="border border-gray-300 p-4 text-left font-bold">Rango Edad</th>
+                                    <th class="border border-gray-300 p-4 text-left font-bold">Peso Ideal (kg)</th>
+                                    <th class="border border-gray-300 p-4 text-left font-bold">Avance Grasa</th>
+                                    <th class="border border-gray-300 p-4 text-left font-bold">Avance Músculo</th>
+                                    <th class="border border-gray-300 p-4 text-left font-bold">Avance Grasa Visceral</th>
+                                    <th class="border border-gray-300 p-4 text-left font-bold">Promedio Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                resultados.forEach((r, index) => {
+                    const pesoIdeal = isFinite(r.peso_ideal) ? Number(r.peso_ideal).toFixed(1) : 'N/A';
+                    const avanceGrasa = isFinite(r.avance_grasa_semana3) ? Number(r.avance_grasa_semana3) : 'N/A';
+                    const avanceMusculo = isFinite(r.avance_musculo_semana3) ? Number(r.avance_musculo_semana3) : 'N/A';
+                    const avanceGrasaVisceral = isFinite(r.avance_grasa_visceral_semana3) ? Number(r.avance_grasa_visceral_semana3) : 'N/A';
+                    const promedioAvance = isFinite(r.promedio_avance_semana3) ? Number(r.promedio_avance_semana3) : 'N/A';
+
+                    const rowClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+                    html += `
+                        <tr class="table-row ${rowClass} border-b border-gray-200">
+                            <td class="border border-gray-300 p-4 font-semibold">${r.usuario_id || 'N/A'}</td>
+                            <td class="border border-gray-300 p-4">${r.rango_edad || 'N/A'}</td>
+                            <td class="border border-gray-300 p-4 font-mono">${pesoIdeal}</td>
+                            <td class="border border-gray-300 p-4 font-mono ${getStatusClass(avanceGrasa)}">${formatValue(avanceGrasa)}</td>
+                            <td class="border border-gray-300 p-4 font-mono ${getStatusClass(avanceMusculo)}">${formatValue(avanceMusculo)}</td>
+                            <td class="border border-gray-300 p-4 font-mono ${getStatusClass(avanceGrasaVisceral)}">${formatValue(avanceGrasaVisceral)}</td>
+                            <td class="border border-gray-300 p-4 font-mono font-bold text-lg ${getStatusClass(promedioAvance)}">${formatValue(promedioAvance)}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                        </tbody>
+                    </table>
+                    </div>
+                    <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-lg font-bold mb-2">Leyenda:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div class="flex items-center">
+                                <span class="status-positive text-lg mr-2">+</span>
+                                <span>Mejora/Aumento</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="status-negative text-lg mr-2">-</span>
+                                <span>Reducción/Disminución</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="status-neutral text-lg mr-2">N/A</span>
+                                <span>Sin datos disponibles</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                resultadosDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error al cargar resultados:', error);
+                resultadosDiv.innerHTML = `
+                    <div class="bg-red-100 border-l-4 border-red-600 p-6 rounded-lg">
+                        <div class="flex items-center">
+                            <svg class="h-8 w-8 text-red-600 mr-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                            <div>
+                                <h3 class="text-lg font-bold text-red-800">Error al cargar resultados</h3>
+                                <p class="text-red-700">${error.message}</p>
+                                <p class="text-sm text-red-600 mt-2">Revisa la consola para más detalles.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.onload = loadResultados;
+    </script>
+</body>
+</html>
