@@ -276,7 +276,7 @@ try {
                         <?php foreach ($eventos as $evento): ?>
                             <div class="evento-card">
                                 <?php if ($evento['imagen'] && file_exists('Uploads/' . $evento['imagen'])): ?>
-                                    <img src="Uploads/<?php echo htmlspecialchars($evento['imagen']); ?>" alt="<?php echo htmlspecialchars($evento['nombre']); ?>" class="evento-imagen">
+                                    <img src="/Uploads/<?php echo htmlspecialchars($evento['imagen']); ?>" alt="<?php echo htmlspecialchars($evento['nombre']); ?>" class="evento-imagen">
                                 <?php else: ?>
                                     <div class="evento-placeholder">Sin Imagen</div>
                                 <?php endif; ?>
