@@ -528,6 +528,124 @@ body {
         padding: 8px;
     }
 }
+
+.email-wrapper {
+  position: relative;
+}
+
+.email-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #ffffff;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  list-style: none;
+  padding: 6px 0;
+  margin: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  display: none;
+  z-index: 10;
+}
+
+.email-suggestions li {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.email-suggestions li[aria-selected="true"],
+.email-suggestions li:hover {
+  background: #fff7cc;         
+}
+
+.email-suggestions .hint {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+
+/* --- Input de correo: mismo estilo que el de contraseña --- */
+.email-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.email-wrapper .email-input {
+  width: 100%;
+  padding: 16px 0;
+  border: none;
+  border-bottom: 1px solid #333333;
+  background: transparent;
+  color: #000000;
+  font-size: 16px;
+  font-weight: 300;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.email-wrapper .email-input:focus {
+  border-bottom: 2px solid #FFD700;
+}
+
+/* --- Menú de sugerencias (integrado y sobrio) --- */
+.email-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-height: 160px;
+  overflow-y: auto;
+  display: none;
+  z-index: 10;
+}
+
+.email-suggestions li {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #000;
+  transition: background 0.2s;
+}
+
+.email-suggestions li:hover,
+.email-suggestions li[aria-selected="true"] {
+  background: rgba(255, 215, 0, 0.15);
+}
+
+/* Responsive: ocupa todo el ancho en móvil */
+@media (max-width: 768px) {
+  .email-wrapper .email-input {
+    font-size: 15px;
+    padding: 14px 0;
+  }
+
+  .email-suggestions {
+    font-size: 15px;
+    max-height: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .email-wrapper .email-input {
+    font-size: 16px; /* evita zoom */
+  }
+}
+
+
+
     </style>
 </head>
 <body>
@@ -543,99 +661,169 @@ body {
                     <div class="error"><?php echo htmlspecialchars($error); ?></div>
                 <?php endif; ?>
                 
-                <form action="sesion_inicio.php" method="POST" id="loginForm">
-                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                    <input type="hidden" name="email" id="fullEmail">
-                    
-                    <div class="form-group">
-                        <label for="emailUsername">Correo electrónico</label>
-                        <div class="email-group">
-                            <input type="text" id="emailUsername" class="email-input" placeholder="MiCorreo" required>
-                            <select id="emailDomain" class="email-domain" required>
-                                <option value="" disabled selected>Seleccione dominio</option>
-                                <?php foreach ($ALLOWED_EMAIL_DOMAINS as $value => $label): ?>
-                                    <option value="<?php echo htmlspecialchars($value); ?>"><?php echo htmlspecialchars($label); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="password">Contraseña</label>
-                        <input type="password" id="password" name="password" required>
-                    </div>
-
-                    <div class="checkbox-container">
-                        <input type="checkbox" id="recordar" name="recordar">
-                        <label for="recordar">Recordar sesión</label>
-                    </div>
-
-                    <button type="submit" class="login-btn">Entrar</button>
-
-                    <div class="form-links">
-                        <a href="register.php">¿No tienes cuenta? Regístrate aquí</a>
-                        <a href="recuperar.php">¿Olvidaste tu contraseña?</a>
-                    </div>
-                </form>
+<form id="loginForm" action="sesion_inicio.php" method="POST" autocomplete="on">
+    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+    <div class="form-group">
+      <label for="email">Correo electrónico</label>
+      <div class="email-wrapper">
+        <input
+          type="email"
+          id="email"
+          name="email"
+          class="email-input"
+          placeholder="correo@dominio.com"
+          autocomplete="username"
+          required
+        />
+        <ul id="emailSugg" class="email-suggestions" role="listbox" aria-label="Sugerencias de dominio"></ul>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password">
+    </div>
+    <div class="checkbox-container">
+      <input type="checkbox" id="recordar" name="recordar">
+      <label for="recordar">Recordar sesión</label>
+    </div>
+    <button type="submit" class="login-btn">Entrar</button>
+    <div class="form-links">
+      <a href="register.php">¿No tienes cuenta? Regístrate aquí</a>
+      <a href="recuperar.php">¿Olvidaste tu contraseña?</a>
+    </div>
+</form>
             </div>
         </div>
     </div>
 
-    <script>
-        // Ensure the email username input is fully editable
-        const emailUsernameInput = document.getElementById('emailUsername');
-        emailUsernameInput.removeAttribute('readonly');
-        emailUsernameInput.removeAttribute('disabled');
-        emailUsernameInput.style.pointerEvents = 'auto';
-        emailUsernameInput.style.userSelect = 'auto';
-        emailUsernameInput.focus(); // Attempt to focus for testing
+<script>
+  // Dominios permitidos del lado PHP → JS
+  const ALLOWED = <?php echo json_encode(array_values($ALLOWED_EMAIL_DOMAINS)); ?>; // ["@gmail.com", "@hotmail.com", "@outlook.com"]
 
-        // Debug: Log input and layout state
-        console.log('emailUsername input - readonly:', emailUsernameInput.readOnly, 'disabled:', emailUsernameInput.disabled);
-        console.log('email-group computed style:', getComputedStyle(document.querySelector('.email-group')).display);
-        console.log('email-domain computed width:', getComputedStyle(document.querySelector('.email-domain')).width);
-        console.log('email-input computed width:', getComputedStyle(document.querySelector('.email-input')).width);
+  const emailInput = document.getElementById('email');
+  const suggBox    = document.getElementById('emailSugg');
+  const form       = document.getElementById('loginForm');
 
-        function validateEmail() {
-            const emailUsername = document.getElementById('emailUsername').value.trim();
-            const emailDomain = document.getElementById('emailDomain').value;
-            const emailUsernameRegex = /^[^\s@]{1,}$/;
+  let activeIndex = -1; // para navegación con teclas
 
-            if (!emailUsernameRegex.test(emailUsername)) {
-                alert('El nombre de usuario del correo debe contener al menos un carácter y no debe incluir espacios ni @.');
-                return false;
-            }
+  function buildSuggestions(list) {
+    suggBox.innerHTML = '';
+    list.forEach((dom, i) => {
+      const li = document.createElement('li');
+      li.role = 'option';
+      li.dataset.index = i;
+      li.innerHTML = `
+        <strong>${dom}</strong>
+        <span class="hint">Pulsa Enter para completar</span>
+      `;
+      li.addEventListener('mousedown', (e) => { // mousedown para no perder foco
+        e.preventDefault();
+        applySuggestion(dom);
+      });
+      suggBox.appendChild(li);
+    });
+    suggBox.style.display = list.length ? 'block' : 'none';
+    activeIndex = list.length ? 0 : -1;
+    highlightActive();
+  }
 
-            if (!emailDomain) {
-                alert('Por favor, seleccione un dominio de correo.');
-                return false;
-            }
+  function highlightActive() {
+    [...suggBox.children].forEach((li, idx) => {
+      li.setAttribute('aria-selected', idx === activeIndex ? 'true' : 'false');
+    });
+  }
 
-            // Update hidden email field
-            document.getElementById('fullEmail').value = emailUsername + emailDomain;
-            return true;
+  function visibleSuggestions() {
+    return suggBox.style.display === 'block';
+  }
+
+  function applySuggestion(domain) {
+    const val = emailInput.value;
+    const atPos = val.indexOf('@');
+    const local = atPos === -1 ? val : val.slice(0, atPos);
+    emailInput.value = local + domain;
+    closeSuggestions();
+  }
+
+  function closeSuggestions() {
+    suggBox.style.display = 'none';
+    suggBox.innerHTML = '';
+    activeIndex = -1;
+  }
+
+  // Filtra por lo que viene después de '@'
+  function filterDomains(partial) {
+    // partial llega SIN '@' (lo limpiamos abajo)
+    const needle = '@' + (partial || '').toLowerCase();
+    return ALLOWED.filter(dom => dom.toLowerCase().startsWith(needle));
+  }
+
+  emailInput.addEventListener('input', () => {
+    const val = emailInput.value;
+    const atPos = val.indexOf('@');
+    if (atPos === -1) {
+      closeSuggestions();
+      return;
+    }
+    const domainPart = val.slice(atPos + 1); // lo que el usuario escribió tras '@'
+    const list = filterDomains(domainPart);
+    buildSuggestions(list);
+  });
+
+  emailInput.addEventListener('keydown', (e) => {
+    if (!visibleSuggestions()) return;
+
+    const items = [...suggBox.children];
+    if (!items.length) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % items.length;
+        highlightActive();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+        highlightActive();
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeIndex >= 0) {
+          const dom = ALLOWED.find(d => d === items[activeIndex].querySelector('strong').textContent);
+          if (dom) applySuggestion(dom);
         }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        closeSuggestions();
+        break;
+    }
+  });
 
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            if (validateEmail()) {
-                document.getElementById('fullEmail').value = document.getElementById('emailUsername').value.trim() + document.getElementById('emailDomain').value;
-                this.submit();
-            }
-        });
+  // Ocultar si clic fuera
+  document.addEventListener('click', (e) => {
+    if (!suggBox.contains(e.target) && e.target !== emailInput) {
+      closeSuggestions();
+    }
+  });
 
-        // Update full email on input change
-        document.getElementById('emailUsername').addEventListener('input', function() {
-            const emailUsername = this.value.trim();
-            const emailDomain = document.getElementById('emailDomain').value;
-            document.getElementById('fullEmail').value = emailUsername && emailDomain ? emailUsername + emailDomain : '';
-        });
+  // Validación del formulario
+  form.addEventListener('submit', (e) => {
+    const value = emailInput.value.trim();
+    const atPos = value.lastIndexOf('@');
+    if (atPos <= 0) {
+      e.preventDefault();
+      alert('Ingresa un correo válido (incluye @).');
+      return;
+    }
+    const domain = value.slice(atPos);
+    if (!ALLOWED.includes(domain)) {
+      e.preventDefault();
+      alert('Domino de correo no permitido. Usa: ' + ALLOWED.join(', '));
+    }
+  });
+</script>
 
-        document.getElementById('emailDomain').addEventListener('change', function() {
-            const emailUsername = document.getElementById('emailUsername').value.trim();
-            const emailDomain = this.value;
-            document.getElementById('fullEmail').value = emailUsername && emailDomain ? emailUsername + emailDomain : '';
-        });
-    </script>
 </body>
 </html>

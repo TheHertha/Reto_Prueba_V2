@@ -853,6 +853,7 @@ select option {
         <!-- Paso 1: Información de cuenta -->
         <div class="step active" id="step1">
           <div class="step-title">Información de Cuenta</div>
+                   <!-- ...existing code... -->
           <div class="form-group">
             <label for="emailUsername">Correo Electrónico</label>
             <div class="email-group">
@@ -864,10 +865,26 @@ select option {
                 <?php endforeach; ?>
               </select>
             </div>
+            <span id="email-check" style="color:red;font-size:12px;"></span>
           </div>
-          <div class="form-group">
+                    <div class="form-group">
             <label for="password">Contraseña</label>
-            <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required>
+            <div style="position:relative;">
+              <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required style="width:100%;padding-right:40px;">
+              <span id="togglePassword" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;">
+                <!-- Ojo cerrado SVG -->
+                <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke="#333" stroke-width="2" fill="none"/>
+                  <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="#333" stroke-width="2" fill="none"/>
+                  <line x1="4" y1="20" x2="20" y2="4" stroke="#333" stroke-width="2"/>
+                </svg>
+                <!-- Ojo abierto SVG (oculto por defecto) -->
+                <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" style="display:none;">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke="#333" stroke-width="2" fill="none"/>
+                  <circle cx="12" cy="12" r="3" stroke="#333" stroke-width="2" fill="none"/>
+                </svg>
+              </span>
+            </div>
           </div>
           <div class="button-group">
             <button type="button" class="btn btn-primary" onclick="nextStep(1)">Siguiente</button>
@@ -936,6 +953,7 @@ select option {
           <div class="form-group">
             <label for="idHerbalife">ID de Herbalife</label>
             <input type="text" id="idHerbalife" name="idHerbalife" required>
+            <span id="id-check" style="color:red;font-size:12px;"></span>
           </div>
           <div class="form-group">
             <label for="coachDisplay">Seleccione Coach</label>
@@ -1239,6 +1257,142 @@ select option {
     });
     
     updateProgress();
+
+     
+    
+    let emailExists = false;
+    let idHerbalifeExists = false;
+    
+    // Verificación en tiempo real de correo
+    document.getElementById('emailUsername').addEventListener('input', checkEmailUnique);
+    document.getElementById('emailDomain').addEventListener('change', checkEmailUnique);
+    
+    function checkEmailUnique() {
+      const username = document.getElementById('emailUsername').value;
+      const domain = document.getElementById('emailDomain').value;
+      const email = username && domain ? username + domain : '';
+      const emailMsg = document.getElementById('email-check');
+      if (!email) {
+        emailMsg.textContent = '';
+        emailExists = false;
+        return;
+      }
+      fetch('check_user.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'email=' + encodeURIComponent(email)
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.exists) {
+            emailMsg.textContent = 'Este correo ya está registrado.';
+            emailExists = true;
+          } else {
+            emailMsg.textContent = '';
+            emailExists = false;
+          }
+        });
+    }
+    
+    // Verificación en tiempo real de ID Herbalife
+    document.getElementById('idHerbalife').addEventListener('input', function() {
+      const id = this.value;
+      const idMsg = document.getElementById('id-check');
+      if (!id) {
+        idMsg.textContent = '';
+        idHerbalifeExists = false;
+        return;
+      }
+      fetch('check_user.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'idHerbalife=' + encodeURIComponent(id)
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.exists) {
+            idMsg.textContent = 'Este ID de Herbalife ya está registrado.';
+            idHerbalifeExists = true;
+          } else {
+            idMsg.textContent = '';
+            idHerbalifeExists = false;
+          }
+        });
+    });
+    
+    // Bloquea el avance si ya existen
+    function validateStep1() {
+      const emailUsername = document.getElementById('emailUsername').value;
+      const emailDomain = document.getElementById('emailDomain').value;
+      const password = document.getElementById('password').value;
+    
+      const emailUsernameRegex = /^[^\s@]+$/;
+      if (!emailUsernameRegex.test(emailUsername)) {
+        alert('El nombre de usuario del correo no debe contener espacios ni @.');
+        return false;
+      }
+      if (!emailDomain) {
+        alert('Por favor, seleccione un dominio de correo.');
+        return false;
+      }
+      if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+        alert('La contraseña debe tener al menos 8 caracteres, incluyendo una letra y un número.');
+        return false;
+      }
+      document.getElementById('fullEmail').value = emailUsername + emailDomain;
+    
+      if (emailExists) {
+        alert('Este correo ya está registrado.');
+        return false;
+      }
+      return true;
+    }
+    
+    function validateStep4() {
+      const telefono = document.getElementById('telefono').value;
+      const idHerbalife = document.getElementById('idHerbalife').value;
+      const seleccionCouch = document.getElementById('seleccionCouch').value;
+    
+      if (!/^[0-9]{10,15}$/.test(telefono)) {
+        alert('El número de teléfono debe tener entre 10 y 15 dígitos.');
+        return false;
+      }
+      if (!idHerbalife.trim()) {
+        alert('Por favor, ingrese su ID de Herbalife.');
+        return false;
+      }
+      if (!seleccionCouch) {
+        alert('Por favor, seleccione un coach.');
+        return false;
+      }
+      if (idHerbalifeExists) {
+        alert('Este ID de Herbalife ya está registrado.');
+        return false;
+      }
+      return true;
+    }
+
+        // ...existing code...
+    document.getElementById('togglePassword').addEventListener('change', function() {
+      const pwd = document.getElementById('password');
+      pwd.type = this.checked ? 'text' : 'password';
+    });
+
+
+    document.getElementById('togglePassword').addEventListener('click', function() {
+      const pwd = document.getElementById('password');
+      const eyeOpen = document.getElementById('eyeOpen');
+      const eyeClosed = document.getElementById('eyeClosed');
+      if (pwd.type === 'password') {
+        pwd.type = 'text';
+        eyeOpen.style.display = '';
+        eyeClosed.style.display = 'none';
+      } else {
+        pwd.type = 'password';
+        eyeOpen.style.display = 'none';
+        eyeClosed.style.display = '';
+      }
+    });
   </script>
 </body>
 </html>
