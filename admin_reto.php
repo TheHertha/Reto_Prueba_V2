@@ -258,7 +258,7 @@ try {
     // Fetch all retos and users
     $stmt = $pdo->query("SELECT id, start_date, end_date FROM retos ORDER BY start_date DESC");
     $retos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $stmt = $pdo->prepare("SELECT id, nombre, rol, habilitado FROM usuarios ORDER BY nombre");
+    $stmt = $pdo->prepare("SELECT id, nombre, rol, habilitado, contrasena FROM usuarios ORDER BY nombre");
     $stmt->execute();
     $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
@@ -365,6 +365,7 @@ try {
                 <a href="reto.php" class="nav-item">Reto</a>
                 <a href="ranking.php" class="nav-item">Ranking</a>
                 <a href="admin_reto.php" class="nav-item active">Administrar Reto</a>
+                  <a href="inventario.php" class="nav-item">Inventario</a>
             </nav>
         </aside>
         <main class="main-content">
@@ -456,6 +457,7 @@ try {
                             <tr>
                                 <th>Nombre</th>
                                 <th>Rol</th>
+                                <th>Contraseña</th>
                                 <th>Estado</th>
                                 <th>Acción</th>
                             </tr>
@@ -465,6 +467,7 @@ try {
                                 <tr>
                                     <td><?php echo htmlspecialchars($usuario['nombre']); ?></td>
                                     <td><?php echo htmlspecialchars($usuario['rol']); ?></td>
+                                    <td><?php echo htmlspecialchars($usuario['contrasena']); ?></td>
                                     <td><?php echo $usuario['habilitado'] ? 'Habilitado' : 'Deshabilitado'; ?></td>
                                     <td>
                                         <button class="btn btn-toggle toggle-habilitado" data-user-id="<?php echo $usuario['id']; ?>" <?php echo $usuario['id'] === $_SESSION['user_id'] || $usuario['rol'] === 'admin' ? 'disabled' : ''; ?>>

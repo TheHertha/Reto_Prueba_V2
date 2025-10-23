@@ -415,6 +415,10 @@ body {
     <a class="nav-btn" href="ranking.php"><span>Ranking</span></a>
     <a class="nav-btn" href="eventos.php"><span>Eventos</span></a>
     <a class="nav-btn" href="productos.php"><span>Productos</span></a>
+        <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin'): ?>
+        <a class="nav-btn" href="admin_reto.php"><span>Administrador</span></a>
+    <?php endif; ?>
+
 </nav>
 
     <div class="carousel-container">
