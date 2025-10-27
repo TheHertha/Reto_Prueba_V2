@@ -72,54 +72,79 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $seleccionCouch = filter_var($_POST['seleccionCouch'], FILTER_SANITIZE_STRING);
 
     // Server-side validation
-    try {
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new Exception("Correo inválido.");
-        }
-        if (strlen($password) < 8 || !preg_match('/[a-zA-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
-            throw new Exception("La contraseña debe tener al menos 8 caracteres, incluyendo una letra y un número.");
-        }
-        if (!preg_match('/^[a-zA-ZÀ-ÿ\s]+$/', $nombre) || !preg_match('/^[a-zA-ZÀ-ÿ\s]+$/', $apellidoP) || !preg_match('/^[a-zA-ZÀ-ÿ\s]+$/', $apellidoM)) {
-            throw new Exception("El nombre y apellidos solo deben contener letras y espacios.");
-        }
-        if (!preg_match('/^[0-9]{10,15}$/', $telefono)) {
-            throw new Exception("El número de teléfono debe tener entre 10 y 15 dígitos.");
-        }
-        if (!array_key_exists($genero, $ALLOWED_GENDERS)) {
-            throw new Exception("Género no válido.");
-        }
-        if (!array_key_exists($pais, $ALLOWED_COUNTRIES)) {
-            throw new Exception("País no válido.");
-        }
-        if (!array_key_exists($seleccionCouch, $ALLOWED_COACHES)) {
-            throw new Exception("Coach no válido.");
-        }
 
-        // Check for duplicate email or id_herbalife
-        $sql = "SELECT id FROM usuarios WHERE email = :email OR id_herbalife = :id_herbalife";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(['email' => $email, 'id_herbalife' => $idHerbalife]);
-        if ($stmt->rowCount() > 0) {
-            throw new Exception("El correo o ID de Herbalife ya está registrado.");
-        }
+        try {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new Exception("Correo inválido.");
+            }
+            if (strlen($password) < 8 || !preg_match('/[a-zA-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
+                throw new Exception("La contraseña debe tener al menos 8 caracteres, incluyendo una letra y un número.");
+            }
+    
+            // Use Unicode-aware pattern for names
+            $namePattern = '/^[\p{L}\s]+$/u';
+            if (!preg_match($namePattern, $nombre)) {
+                throw new Exception("El nombre solo debe contener letras y espacios.");
+            }
+            if (!preg_match($namePattern, $apellidoP)) {
+                throw new Exception("El apellido paterno solo debe contener letras y espacios.");
+            }
+            // Apellido materno opcional: validar solo si se ingresó algo
+            if ($apellidoM !== '' && !preg_match($namePattern, $apellidoM)) {
+                throw new Exception("El apellido materno solo debe contener letras y espacios.");
+            }
+    
+            if (!preg_match('/^[0-9]{10,15}$/', $telefono)) {
+                throw new Exception("El número de teléfono debe tener entre 10 y 15 dígitos.");
+            }
+            if (!array_key_exists($genero, $ALLOWED_GENDERS)) {
+                throw new Exception("Género no válido.");
+            }
+            if (!array_key_exists($pais, $ALLOWED_COUNTRIES)) {
+                throw new Exception("País no válido.");
+            }
+            if (!array_key_exists($seleccionCouch, $ALLOWED_COACHES)) {
+                throw new Exception("Coach no válido.");
+            }
+    
+            // Normalize empty idHerbalife to null for checks/insert
+            if ($idHerbalife === '') {
+                $idHerbalife = null;
+            }
+    
+            // Check for duplicate email or id_herbalife (only check id if fue provisto)
+            if ($idHerbalife === null) {
+                $sql = "SELECT id FROM usuarios WHERE email = :email";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(['email' => $email]);
+            } else {
+                $sql = "SELECT id FROM usuarios WHERE email = :email OR id_herbalife = :id_herbalife";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(['email' => $email, 'id_herbalife' => $idHerbalife]);
+            }
+            if ($stmt->rowCount() > 0) {
+                throw new Exception("El correo o ID de Herbalife ya está registrado.");
+            }
+    
+            // Insert user (id_herbalife puede ser NULL)
+            $sql = "INSERT INTO usuarios (email, contrasena, nombre, apellido_paterno, apellido_materno, fecha_nacimiento, genero, pais, telefono, id_herbalife, seleccion_couch, fecha_registro)
+                    VALUES (:email, :contrasena, :nombre, :apellido_paterno, :apellido_materno, :fecha_nacimiento, :genero, :pais, :telefono, :id_herbalife, :seleccion_couch, NOW())";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                'email' => $email,
+                'contrasena' => $password,
+                'nombre' => $nombre,
+                'apellido_paterno' => $apellidoP,
+                'apellido_materno' => $apellidoM !== '' ? $apellidoM : null,
+                'fecha_nacimiento' => $fechaNacimiento,
+                'genero' => $genero,
+                'pais' => $pais,
+                'telefono' => $telefono,
+                'id_herbalife' => $idHerbalife,
+                'seleccion_couch' => $seleccionCouch
+            ]);
 
-        // Insert user with plain text password
-        $sql = "INSERT INTO usuarios (email, contrasena, nombre, apellido_paterno, apellido_materno, fecha_nacimiento, genero, pais, telefono, id_herbalife, seleccion_couch, fecha_registro)
-                VALUES (:email, :contrasena, :nombre, :apellido_paterno, :apellido_materno, :fecha_nacimiento, :genero, :pais, :telefono, :id_herbalife, :seleccion_couch, NOW())";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            'email' => $email,
-            'contrasena' => $password, // Store plain text password
-            'nombre' => $nombre,
-            'apellido_paterno' => $apellidoP,
-            'apellido_materno' => $apellidoM,
-            'fecha_nacimiento' => $fechaNacimiento,
-            'genero' => $genero,
-            'pais' => $pais,
-            'telefono' => $telefono,
-            'id_herbalife' => $idHerbalife,
-            'seleccion_couch' => $seleccionCouch
-        ]);
+            
 
         // Auto-login
         $user_id = $pdo->lastInsertId();

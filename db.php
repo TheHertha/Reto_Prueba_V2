@@ -1,7 +1,7 @@
 <?php
 $DB_HOST = 'localhost';
 $DB_USER = 'root';
-$DB_PASS = 'Sk2Lo9R+k3.y';
+$DB_PASS = '';//Sk2Lo9R+k3.y
 $DB_NAME = 'retofitcat21';
 
 $mysqli = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);

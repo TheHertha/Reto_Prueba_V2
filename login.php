@@ -678,10 +678,27 @@ body {
         <ul id="emailSugg" class="email-suggestions" role="listbox" aria-label="Sugerencias de dominio"></ul>
       </div>
     </div>
-    <div class="form-group">
-      <label for="password">Contraseña</label>
-      <input type="password" id="password" name="password" required autocomplete="current-password">
-    </div>
+
+              <div class="form-group">
+                <label for="password">Contraseña</label>
+                <div style="position:relative;">
+                  <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Mínimo 8 caracteres" style="width:100%;padding-right:40px;">
+                  <button type="button" id="togglePassword" aria-label="Mostrar contraseña" title="Mostrar contraseña" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;padding:0;cursor:pointer;">
+                    <!-- Ojo cerrado SVG -->
+                    <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke="#333" stroke-width="2" fill="none"/>
+                      <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="#333" stroke-width="2" fill="none"/>
+                      <line x1="4" y1="20" x2="20" y2="4" stroke="#333" stroke-width="2"/>
+                    </svg>
+                    <!-- Ojo abierto SVG (oculto por defecto) -->
+                    <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" style="display:none;">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke="#333" stroke-width="2" fill="none"/>
+                      <circle cx="12" cy="12" r="3" stroke="#333" stroke-width="2" fill="none"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
     <div class="checkbox-container">
       <input type="checkbox" id="recordar" name="recordar">
       <label for="recordar">Recordar sesión</label>
@@ -823,6 +840,30 @@ body {
       alert('Domino de correo no permitido. Usa: ' + ALLOWED.join(', '));
     }
   });
+
+   // Toggle ver/ocultar contraseña
+  (function(){
+    const pwd = document.getElementById('password');
+    const btn = document.getElementById('togglePassword');
+    const eyeClosed = document.getElementById('eyeClosed');
+    const eyeOpen = document.getElementById('eyeOpen');
+
+    if (!pwd || !btn) return;
+
+    btn.addEventListener('click', () => {
+      const isTypePassword = pwd.type === 'password';
+      pwd.type = isTypePassword ? 'text' : 'password';
+      // alternar iconos
+      if (eyeClosed && eyeOpen) {
+        eyeClosed.style.display = isTypePassword ? 'none' : '';
+        eyeOpen.style.display = isTypePassword ? '' : 'none';
+      }
+      // actualizar aria-label
+      btn.setAttribute('aria-label', isTypePassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      btn.title = isTypePassword ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    });
+  })();
+</script>
 </script>
 
 </body>
