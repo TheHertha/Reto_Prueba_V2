@@ -904,7 +904,7 @@ select option {
           </div>
           <div class="form-group">
             <label for="apellidoMaterno">Apellido Materno</label>
-            <input type="text" id="apellidoMaterno" name="apellidoMaterno" required>
+            <input type="text" id="apellidoMaterno" name="apellidoMaterno">
           </div>
           <div class="button-group">
             <button type="button" class="btn btn-secondary" onclick="prevStep(2)">Anterior</button>
@@ -952,7 +952,7 @@ select option {
           </div>
           <div class="form-group">
             <label for="idHerbalife">ID de Herbalife</label>
-            <input type="text" id="idHerbalife" name="idHerbalife" required>
+            <input type="text" id="idHerbalife" name="idHerbalife">
             <span id="id-check" style="color:red;font-size:12px;"></span>
           </div>
           <div class="form-group">
@@ -1115,29 +1115,35 @@ select option {
       return true;
     }
     
-    function validateStep2() {
-      const nombre = document.getElementById('nombre').value;
-      const apellidoPaterno = document.getElementById('apellidoPaterno').value;
-      const apellidoMaterno = document.getElementById('apellidoMaterno').value;
-      
-      const nameRegex = /^[a-zA-ZÀ-ÿ\s]+$/;
-      if (!nameRegex.test(nombre)) {
-        alert('El nombre solo debe contener letras y espacios.');
-        return false;
-      }
-      
-      if (!nameRegex.test(apellidoPaterno)) {
-        alert('El apellido paterno solo debe contener letras y espacios.');
-        return false;
-      }
-      
-      if (!nameRegex.test(apellidoMaterno)) {
-        alert('El apellido materno solo debe contener letras y espacios.');
-        return false;
-      }
-      
-      return true;
-    }
+
+
+
+
+function validateStep2() {
+  const nombre = document.getElementById('nombre').value;
+  const apellidoPaterno = document.getElementById('apellidoPaterno').value;
+  const apellidoMaterno = document.getElementById('apellidoMaterno').value;
+
+  const nameRegex = /^[a-zA-ZÀ-ÿ\s]+$/;
+  if (!nameRegex.test(nombre)) {
+    alert('El nombre solo debe contener letras y espacios.');
+    return false;
+  }
+
+  if (!nameRegex.test(apellidoPaterno)) {
+    alert('El apellido paterno solo debe contener letras y espacios.');
+    return false;
+  }
+
+
+  if (apellidoMaterno && !nameRegex.test(apellidoMaterno)) {
+    alert('El apellido materno solo debe contener letras y espacios.');
+    return false;
+  }
+
+  return true;
+}
+
     
     function validateStep3() {
       const fechaNacimiento = document.getElementById('fechaNacimiento').value;
@@ -1348,6 +1354,7 @@ select option {
       return true;
     }
     
+
     function validateStep4() {
       const telefono = document.getElementById('telefono').value;
       const idHerbalife = document.getElementById('idHerbalife').value;
@@ -1357,22 +1364,21 @@ select option {
         alert('El número de teléfono debe tener entre 10 y 15 dígitos.');
         return false;
       }
-      if (!idHerbalife.trim()) {
-        alert('Por favor, ingrese su ID de Herbalife.');
+    
+      // ID de Herbalife opcional: si se ingresó, comprobar duplicado (idHerbalifeExists se setea en tiempo real)
+      if (idHerbalife.trim() && idHerbalifeExists) {
+        alert('Este ID de Herbalife ya está registrado.');
         return false;
       }
+    
       if (!seleccionCouch) {
         alert('Por favor, seleccione un coach.');
         return false;
       }
-      if (idHerbalifeExists) {
-        alert('Este ID de Herbalife ya está registrado.');
-        return false;
-      }
+    
       return true;
     }
 
-        // ...existing code...
     document.getElementById('togglePassword').addEventListener('change', function() {
       const pwd = document.getElementById('password');
       pwd.type = this.checked ? 'text' : 'password';
