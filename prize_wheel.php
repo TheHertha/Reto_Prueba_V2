@@ -7,6 +7,8 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+//comentario para comentar que no joda el deploy
+
 $user_id = $_SESSION['user_id'];
 try {
     $stmt = $pdo->prepare("SELECT has_spun FROM usuarios WHERE id = ?");
