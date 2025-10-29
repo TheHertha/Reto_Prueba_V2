@@ -456,7 +456,6 @@ try {
                         <thead>
                             <tr>
                                 <th>Nombre</th>
-                                <th>Rol</th>
                                 <th>Contraseña</th>
                                 <th>Estado</th>
                                 <th>Acción</th>
@@ -466,7 +465,6 @@ try {
                             <?php foreach ($usuarios as $usuario): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($usuario['nombre']); ?></td>
-                                    <td><?php echo htmlspecialchars($usuario['rol']); ?></td>
                                     <td><?php echo htmlspecialchars($usuario['contrasena']); ?></td>
                                     <td><?php echo $usuario['habilitado'] ? 'Habilitado' : 'Deshabilitado'; ?></td>
                                     <td>
