@@ -247,6 +247,58 @@ try {
             exit;
         }
 
+        // Handle change user role
+        if (isset($_POST['change_role'])) {
+            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+            $new_role = $_POST['new_role'] ?? '';
+
+            if (!$user_id || !in_array($new_role, ['user', 'coach', 'admin'])) {
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => 'Datos inválidos.']);
+                error_log("admin_reto.php: Invalid change_role data, user_id=$user_id, new_role=$new_role");
+                exit;
+            }
+
+            if ($user_id === (int)$_SESSION['user_id']) {
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => 'No puedes cambiar tu propio rol.']);
+                error_log("admin_reto.php: Admin attempted to change own role, user_id=$user_id");
+                exit;
+            }
+
+            $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE id = :user_id");
+            $stmt->execute(['user_id' => $user_id]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => "Usuario no encontrado: ID $user_id"]);
+                error_log("admin_reto.php: User not found for role change, user_id=$user_id");
+                exit;
+            }
+
+            if ($user['rol'] === 'admin' && $new_role !== 'admin') {
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => 'No puedes degradar a otro administrador.']);
+                error_log("admin_reto.php: Attempt to downgrade admin, user_id=$user_id");
+                exit;
+            }
+
+            $stmt = $pdo->prepare("UPDATE usuarios SET rol = :new_role WHERE id = :user_id");
+            $stmt->execute(['new_role' => $new_role, 'user_id' => $user_id]);
+
+            $_SESSION['success'] = "Rol actualizado a '$new_role' correctamente.";
+            ob_clean();
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => $_SESSION['success'], 'new_role' => $new_role]);
+            error_log("admin_reto.php: Role changed, user_id=$user_id, new_role=$new_role");
+            exit;
+        }
+
         // Invalid POST request
         ob_clean();
         header('Content-Type: application/json');
@@ -330,6 +382,23 @@ try {
         .search-filter { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
         .search-filter input, .search-filter select { padding: 10px; font-size: 1rem; border: 1px solid #ddd; border-radius: 6px; transition: border-color 0.3s ease; flex: 1; min-width: 150px; }
         .search-filter input:focus, .search-filter select:focus { border-color: #FFD700; box-shadow: 0 0 6px rgba(255, 215, 0, 0.3); outline: none; }
+
+        /* Estilo para select de rol */
+        .change-role-select {
+            padding: 6px 10px;
+            font-size: 0.9rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            min-width: 100px;
+        }
+        .change-role-select:disabled {
+            background: #f0f0f0;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
         @media (max-width: 1024px) {
             .layout { flex-direction: column; }
             .sidebar { width: 100%; padding: 20px; }
@@ -365,7 +434,7 @@ try {
                 <a href="reto.php" class="nav-item">Reto</a>
                 <a href="ranking.php" class="nav-item">Ranking</a>
                 <a href="admin_reto.php" class="nav-item active">Administrar Reto</a>
-                  <a href="inventario.php" class="nav-item">Inventario</a>
+                <a href="inventario.php" class="nav-item">Inventario</a>
             </nav>
         </aside>
         <main class="main-content">
@@ -449,6 +518,7 @@ try {
                         <select id="filter-rol">
                             <option value="all">Todos los roles</option>
                             <option value="admin">Administrador</option>
+                            <option value="coach">Coach</option>
                             <option value="user">Usuario</option>
                         </select>
                     </div>
@@ -456,6 +526,7 @@ try {
                         <thead>
                             <tr>
                                 <th>Nombre</th>
+                                <th>Rol</th>
                                 <th>Contraseña</th>
                                 <th>Estado</th>
                                 <th>Acción</th>
@@ -463,10 +534,17 @@ try {
                         </thead>
                         <tbody id="users-table">
                             <?php foreach ($usuarios as $usuario): ?>
-                                <tr>
+                                <tr data-user-id="<?php echo $usuario['id']; ?>">
                                     <td><?php echo htmlspecialchars($usuario['nombre']); ?></td>
+                                    <td>
+                                        <select class="change-role-select" <?php echo $usuario['id'] === $_SESSION['user_id'] || $usuario['rol'] === 'admin' ? 'disabled' : ''; ?>>
+                                            <option value="user" <?php echo $usuario['rol'] === 'user' ? 'selected' : ''; ?>>Usuario</option>
+                                            <option value="coach" <?php echo $usuario['rol'] === 'coach' ? 'selected' : ''; ?>>Coach</option>
+                                            <option value="admin" <?php echo $usuario['rol'] === 'admin' ? 'selected' : ''; ?>>Administrador</option>
+                                        </select>
+                                    </td>
                                     <td><?php echo htmlspecialchars($usuario['contrasena']); ?></td>
-                                    <td><?php echo $usuario['habilitado'] ? 'Habilitado' : 'Deshabilitado'; ?></td>
+                                    <td class="user-status"><?php echo $usuario['habilitado'] ? 'Habilitado' : 'Deshabilitado'; ?></td>
                                     <td>
                                         <button class="btn btn-toggle toggle-habilitado" data-user-id="<?php echo $usuario['id']; ?>" <?php echo $usuario['id'] === $_SESSION['user_id'] || $usuario['rol'] === 'admin' ? 'disabled' : ''; ?>>
                                             <?php echo $usuario['habilitado'] ? 'Deshabilitar' : 'Habilitar'; ?>
@@ -476,7 +554,7 @@ try {
                             <?php endforeach; ?>
                             <?php if (empty($usuarios)): ?>
                                 <tr>
-                                    <td colspan="4">No hay usuarios disponibles.</td>
+                                    <td colspan="5">No hay usuarios disponibles.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -596,8 +674,10 @@ try {
 
             rows.forEach(row => {
                 const name = row.cells[0].textContent.toLowerCase();
-                const rol = row.cells[1].textContent.toLowerCase();
-                const habilitado = row.cells[2].textContent.toLowerCase() === 'habilitado' ? '1' : '0';
+                const rolSelect = row.querySelector('.change-role-select');
+                const rol = rolSelect ? rolSelect.value : 'user';
+                const statusText = row.querySelector('.user-status').textContent.toLowerCase();
+                const habilitado = statusText.includes('habilitado') ? '1' : '0';
 
                 const matchesSearch = name.includes(search);
                 const matchesHabilitado = habilitadoFilter === 'all' || habilitado === habilitadoFilter;
@@ -670,7 +750,7 @@ try {
                     const result = await response.json();
                     if (result.success) {
                         this.textContent = result.habilitado ? 'Deshabilitar' : 'Habilitar';
-                        this.parentElement.previousElementSibling.textContent = result.habilitado ? 'Habilitado' : 'Deshabilitado';
+                        this.closest('tr').querySelector('.user-status').textContent = result.habilitado ? 'Habilitado' : 'Deshabilitado';
                         const alert = document.createElement('div');
                         alert.className = 'alert alert-success';
                         alert.innerHTML = `${result.message} <button class="alert-close">×</button>`;
@@ -692,6 +772,59 @@ try {
                 } finally {
                     this.disabled = false;
                 }
+            });
+        });
+
+        // Change user role
+        document.querySelectorAll('.change-role-select').forEach(select => {
+            select.addEventListener('change', async function() {
+                if (this.disabled) return;
+                const userId = this.closest('tr').dataset.userId;
+                const newRole = this.value;
+                const formData = new FormData();
+                formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>');
+                formData.append('change_role', '1');
+                formData.append('user_id', userId);
+                formData.append('new_role', newRole);
+
+                try {
+                    this.disabled = true;
+                    const response = await fetch('', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-success';
+                        alert.innerHTML = `${result.message} <button class="alert-close">×</button>`;
+                        document.querySelector('.content').prepend(alert);
+                        alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                        filterUsers(); // Re-filtrar
+                    } else {
+                        this.value = this.dataset.previousValue;
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-error';
+                        alert.innerHTML = `${result.message} <button class="alert-close">×</button>`;
+                        document.querySelector('.content').prepend(alert);
+                        alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                    }
+                } catch (error) {
+                    this.value = this.dataset.previousValue;
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-error';
+                    alert.innerHTML = `Error al cambiar rol: ${error.message}. <button class="alert-close">×</button>`;
+                    document.querySelector('.content').prepend(alert);
+                    alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                } finally {
+                    this.disabled = false;
+                }
+            });
+
+            // Store previous value for rollback
+            select.dataset.previousValue = select.value;
+            select.addEventListener('focus', function() {
+                this.dataset.previousValue = this.value;
             });
         });
 
