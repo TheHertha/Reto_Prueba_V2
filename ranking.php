@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // Fetch user role
 try {
-    $stmt = $pdo->prepare("SELECT rol, habilitado FROM usuarios WHERE id = :user_id");
+    $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE id = :user_id");
     $stmt->execute(['user_id' => $_SESSION['user_id']]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$user) {
@@ -22,12 +22,7 @@ try {
         exit;
     }
     $is_admin = $user['rol'] === 'admin';
-    if (!$is_admin && !$user['habilitado']) {
-        $_SESSION['error'] = "Tu cuenta no está habilitada. Contacta al administrador.";
-        error_log("ranking.php: Redirecting to inicio.php, not admin and not habilitado, user_id=" . $_SESSION['user_id']);
-        header("Location: inicio.php?no_redirect=1");
-        exit;
-    }
+    // Ya no se verifica 'habilitado' para acceso
 } catch (PDOException $e) {
     $_SESSION['error'] = "Error al verificar el usuario: " . $e->getMessage();
     error_log("ranking.php: Database error: " . $e->getMessage());
