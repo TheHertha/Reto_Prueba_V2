@@ -198,16 +198,16 @@ unset($_SESSION['error'], $_SESSION['success']);
           <div class="form-group">
             <label for="genero">Género</label>
          <select id="genero" name="genero" required>
-  <option value="" disabled selected>Seleccione</option>
-  <option value="Masculino">Masculino</option>
-  <option value="Femenino">Femenino</option>
-  <option value="Otro">Otro</option>
-</select>
+          <option value="" selected>Seleccione</option>
+          <option value="Masculino">Masculino</option>
+          <option value="Femenino">Femenino</option>
+          <option value="Otro">Otro</option>
+        </select>
           </div>
           <div class="form-group">
             <label for="pais">País</label>
             <select id="pais" name="pais" required>
-              <option value="" disabled selected>Seleccione</option>
+              <option value="" selected>Seleccione</option>
               <?php foreach ($ALLOWED_COUNTRIES as $value => $label): ?>
                 <option value="<?php echo htmlspecialchars($value); ?>"><?php echo htmlspecialchars($label); ?></option>
               <?php endforeach; ?>
