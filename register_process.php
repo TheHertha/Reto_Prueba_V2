@@ -26,48 +26,46 @@ if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_tok
     exit;
 }
 
-$role = trim($_POST['role'] ?? '');
+// === USAMOS rol (con acento) ===
+$rol = trim($_POST['rol'] ?? '');
 $seleccionCouch = trim($_POST['seleccionCouch'] ?? '');
 
-// ACEPTAMOS SOLO 'user' (Participante) y 'coach'
-if (!in_array($role, ['user', 'coach'], true)) {
+// VALIDAMOS QUE SEA 'user' o 'coach'
+if (!in_array($rol, ['user', 'coach'], true)) {
     $_SESSION['error'] = "Debes seleccionar un rol válido.";
     header("Location: register.php");
     exit;
 }
 
-$email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-$password = $_POST['password'];
-$nombre = trim($_POST['nombre']);
-$apellidoP = trim($_POST['apellidoPaterno']);
+$email = filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL);
+$password = $_POST['password'] ?? '';
+$nombre = trim($_POST['nombre'] ?? '');
+$apellidoP = trim($_POST['apellidoPaterno'] ?? '');
 $apellidoM = trim($_POST['apellidoMaterno'] ?? '');
-$fechaNacimiento = $_POST['fechaNacimiento'];
-$genero = $_POST['genero'];
-$pais = $_POST['pais'];
-$telefono = preg_replace('/[^0-9]/', '', $_POST['telefono']);
+$fechaNacimiento = $_POST['fechaNacimiento'] ?? '';
+$genero = $_POST['genero'] ?? '';
+$pais = $_POST['pais'] ?? '';
+$telefono = preg_replace('/[^0-9]/', '', $_POST['telefono'] ?? '');
 $idHerbalife = trim($_POST['idHerbalife'] ?? '');
 
-// VALIDACIONES BÁSICAS
+// === VALIDACIONES BÁSICAS ===
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $_SESSION['error'] = "Correo electrónico inválido.";
-    header("Location: register.php");
-    exit;
+    header("Location: register.php"); exit;
 }
 if (strlen($password) < 8) {
     $_SESSION['error'] = "La contraseña debe tener al menos 8 caracteres.";
-    header("Location: register.php");
-    exit;
+    header("Location: register.php"); exit;
 }
 if (empty($nombre) || empty($apellidoP) || empty($fechaNacimiento) || empty($genero) || empty($pais) || empty($telefono)) {
     $_SESSION['error'] = "Todos los campos obligatorios deben completarse.";
-    header("Location: register.php");
-    exit;
+    header("Location: register.php"); exit;
 }
 
 try {
     $pdo->beginTransaction();
 
-    // VERIFICAR DUPLICADOS
+    // === VERIFICAR DUPLICADOS ===
     $sql = "SELECT id FROM usuarios WHERE email = :email";
     $params = [':email' => $email];
     if (!empty($idHerbalife)) {
@@ -80,8 +78,8 @@ try {
         throw new Exception("El correo o ID Herbalife ya está registrado.");
     }
 
-    // VALIDAR COACH (solo para Participantes = 'user')
-    if ($role === 'user') {
+    // === VALIDAR COACH (solo para user) ===
+    if ($rol === 'user') {
         if (empty($seleccionCouch)) {
             throw new Exception("Debes seleccionar un Coach.");
         }
@@ -94,15 +92,15 @@ try {
         $seleccionCouch = null;
     }
 
-    // INSERTAR USUARIO (¡PERFECTO CON 'rol' Y VALORES 'user'/'coach'!)
+    // === INSERTAR USUARIO (100% COMPATIBLE CON TU TABLA REAL) ===
     $hashed = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $pdo->prepare("
         INSERT INTO usuarios (
             email, contrasena, nombre, apellido_paterno, apellido_materno,
             fecha_nacimiento, genero, pais, telefono, id_herbalife,
-            rol, seleccion_couch, fecha_registro
+            seleccion_couch, rol, habilitado
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1
         )
     ");
     $stmt->execute([
@@ -116,14 +114,14 @@ try {
         $pais,
         $telefono,
         $idHerbalife ?: null,
-        $role,           // 'user' o 'coach' → ¡COMPATIBLE CON TU ENUM!
-        $seleccionCouch
+        $seleccionCouch,
+        $rol  // 'user' o 'coach' → TU ENUM LO ACEPTA PERFECTO
     ]);
 
     $user_id = $pdo->lastInsertId();
 
-    // SI ES COACH → AGREGAR A TABLA COACHES
-    if ($role === 'coach') {
+    // === SI ES COACH → AGREGAR A TABLA coaches ===
+    if ($rol === 'coach') {
         $coach_name = trim("$nombre $apellidoP " . ($apellidoM ? $apellidoM : ''));
         $stmt = $pdo->prepare("INSERT IGNORE INTO coaches (name, user_id) VALUES (?, ?)");
         $stmt->execute([$coach_name, $user_id]);
@@ -131,22 +129,20 @@ try {
 
     $pdo->commit();
 
-    // ÉXITO
+    // === ÉXITO ===
     $_SESSION['user_id'] = $user_id;
     $_SESSION['nombre'] = $nombre;
-    $_SESSION['role'] = $role;  // 'user' o 'coach'
-    $_SESSION['success'] = "¡Cuenta creada con éxito, " . ($role === 'user' ? 'Participante' : 'Coach') . "!";
+    $_SESSION['rol'] = $rol;
+    $_SESSION['success'] = "¡Cuenta creada con éxito, " . ($rol === 'user' ? 'Participante' : 'Coach') . "!";
 
-    // Limpiar intentos
     unset($_SESSION[$attempt_key]);
-
     header("Location: prize_wheel.php");
     exit;
 
 } catch (Exception $e) {
     $pdo->rollBack();
     $_SESSION['error'] = $e->getMessage();
-    error_log("Error en registro: " . $e->getMessage());
+    error_log("Error registro: " . $e->getMessage());
     header("Location: register.php");
     exit;
 }

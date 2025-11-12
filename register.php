@@ -7,17 +7,8 @@ if (isset($_SESSION['user_id'])) {
     exit;
 }
 
-$ALLOWED_GENDERS = [
-    'Masculino' => 'Masculino',
-    'Femenino' => 'Femenino',
-    'Otro' => 'Otro'
-];
-$ALLOWED_COUNTRIES = [
-    'Argentina' => 'Argentina', 'Bolivia' => 'Bolivia', 'Canadá' => 'Canadá', 'Colombia' => 'Colombia',
-    'Costa Rica' => 'Costa Rica', 'Ecuador' => 'Ecuador', 'El Salvador' => 'El Salvador',
-    'Estados Unidos' => 'Estados Unidos', 'Guatemala' => 'Guatemala', 'Italia' => 'Italia',
-    'México' => 'México', 'Perú' => 'Perú'
-];
+$ALLOWED_GENDERS = ['Masculino','Femenino','Otro'];
+$ALLOWED_COUNTRIES = ['Argentina','Bolivia','Canadá','Colombia','Costa Rica','Ecuador','El Salvador','Estados Unidos','Guatemala','Italia','México','Perú'];
 
 $error = $_SESSION['error'] ?? '';
 $success = $_SESSION['success'] ?? '';
@@ -126,7 +117,7 @@ unset($_SESSION['error'], $_SESSION['success']);
       
       <form action="register_process.php" method="POST" id="registrationForm">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-        <input type="hidden" name="role" id="role" value="" required>
+        <input type="hidden" name="rol" id="rol" value="" required> <!-- CAMBIADO: rol -->
         <input type="hidden" name="seleccionCouch" id="seleccionCouch" value="">
 
         <!-- Paso 1: Rol -->
@@ -134,13 +125,13 @@ unset($_SESSION['error'], $_SESSION['success']);
           <div class="step-title">¿Qué tipo de usuario eres?</div>
           <div class="form-group" style="text-align:center;">
             <div style="display:flex; gap:40px; justify-content:center; flex-wrap:wrap; margin-top:50px;">
-              <div class="role-option" onclick="selectRole('user')">
-                <input type="radio" name="temp_role" value="user" style="display:none;">
+              <div class="role-option" onclick="selectRol('user')">
+                <input type="radio" name="temp_rol" value="user" style="display:none;">
                 <div style="font-size:28px; margin-bottom:10px;">Participante</div>
                 <div style="font-size:14px; color:#666;">Quiero participar en los retos</div>
               </div>
-              <div class="role-option" onclick="selectRole('coach')">
-                <input type="radio" name="temp_role" value="coach" style="display:none;">
+              <div class="role-option" onclick="selectRol('coach')">
+                <input type="radio" name="temp_rol" value="coach" style="display:none;">
                 <div style="font-size:28px; margin-bottom:10px;">Coach</div>
                 <div style="font-size:14px; color:#666;">Quiero guiar a mis participantes</div>
               </div>
@@ -270,18 +261,16 @@ unset($_SESSION['error'], $_SESSION['success']);
 <script>
 let currentStep = 1;
 const totalSteps = 5;
-let selectedRole = '';
+let selectedRol = '';  // CAMBIADO: selectedRol
 let selectedCoachName = '';
 
-// === SELECCIONAR ROL ===
-function selectRole(role) {
-    selectedRole = role;
-    document.getElementById('role').value = role;
+// CAMBIADO: selectRol
+function selectRol(rol) {
+    selectedRol = rol;
+    document.getElementById('rol').value = rol;  // rol con acento
 
-    // Habilitar botón
     document.getElementById('btnNextRole').disabled = false;
 
-    // Resaltar visualmente
     document.querySelectorAll('.role-option').forEach(el => {
         el.classList.remove('selected');
         el.style.borderColor = '#333';
@@ -292,21 +281,16 @@ function selectRole(role) {
     event.target.closest('.role-option').style.background = '#f0f0f0';
 }
 
-// === MOSTRAR PASO ===
 function showStep(n) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     document.getElementById('step' + n).classList.add('active');
     currentStep = n;
     updateProgress();
-    
-    if (n === 5) {
-        updateCoachVisibility();
-    }
+    if (n === 5) updateCoachVisibility();
 }
 
-// === AVANZAR PASO ===
 function nextStep(step) {
-    if (step === 1 && !selectedRole) {
+    if (step === 1 && !selectedRol) {
         alert('Por favor, selecciona si eres Coach o Participante.');
         return;
     }
@@ -317,14 +301,13 @@ function prevStep(step) {
     if (step > 1) showStep(step - 1);
 }
 
-// === ACTUALIZAR VISIBILIDAD DEL COACH ===
 function updateCoachVisibility() {
     const group = document.getElementById('coachSelectionGroup');
     const display = document.getElementById('coachDisplay');
     const hidden = document.getElementById('seleccionCouch');
     const submitBtn = document.getElementById('submitBtn');
 
-    if (selectedRole === 'coach') {
+    if (selectedRol === 'coach') {
         group.style.display = 'none';
         display.removeAttribute('required');
         hidden.removeAttribute('required');
@@ -339,7 +322,6 @@ function updateCoachVisibility() {
     }
 }
 
-// === PROGRESO ===
 function updateProgress() {
     const progress = (currentStep / totalSteps) * 100;
     document.getElementById('progressBar').style.width = progress + '%';
@@ -349,7 +331,6 @@ function updateProgress() {
     }
 }
 
-// === MODAL COACHES ===
 function openCoachModal() {
     document.getElementById('coachModal').style.display = 'flex';
     fetchCoaches();
@@ -364,7 +345,6 @@ function selectCoach(coachName) {
     closeCoachModal();
 }
 
-// === BUSCAR COACHES ===
 function fetchCoaches(search = '') {
     const list = document.getElementById('coachList');
     list.innerHTML = '<div style="padding:15px;text-align:center;">Cargando...</div>';
@@ -396,15 +376,14 @@ function filterCoaches() {
     }, 300);
 }
 
-// === VALIDAR ENVÍO ===
 document.getElementById('registrationForm').addEventListener('submit', function(e) {
-    if (selectedRole === 'user' && !selectedCoachName) {
+    if (selectedRol === 'user' && !selectedCoachName) {
         e.preventDefault();
         alert('Debes seleccionar un Coach para registrarte como Participante.');
         openCoachModal();
         return false;
     }
-    if (!selectedRole) {
+    if (!selectedRol) {
         e.preventDefault();
         alert('Debes seleccionar un rol.');
         showStep(1);
@@ -412,7 +391,6 @@ document.getElementById('registrationForm').addEventListener('submit', function(
     }
 });
 
-// === INICIALIZAR ===
 updateProgress();
 updateCoachVisibility();
 </script>
