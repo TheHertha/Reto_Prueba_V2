@@ -147,7 +147,7 @@ unset($_SESSION['error'], $_SESSION['success']);
             </div>
           </div>
           <div class="button-group">
-            <button type="button" class="btn btn-primary" id="btnNextRole" disabled>Siguiente</button>
+           <button type="button" class="btn btn-primary" id="btnNextRole" disabled onclick="nextStep(1)">Siguiente</button>
           </div>
         </div>
 
@@ -267,134 +267,154 @@ unset($_SESSION['error'], $_SESSION['success']);
     </div>
   </div>
 
-  <script>
-    let currentStep = 1;
-    const totalSteps = 5;
-    let selectedRole = '';
-    let selectedCoachName = '';
+<script>
+let currentStep = 1;
+const totalSteps = 5;
+let selectedRole = '';
+let selectedCoachName = '';
 
-    function selectRole(role) {
-      selectedRole = role;
-      document.getElementById('role').value = role;
-      document.getElementById('btnNextRole').disabled = false;
-      document.querySelectorAll('.role-option').forEach(el => {
+// === SELECCIONAR ROL ===
+function selectRole(role) {
+    selectedRole = role;
+    document.getElementById('role').value = role;
+
+    // Habilitar botón
+    document.getElementById('btnNextRole').disabled = false;
+
+    // Resaltar visualmente
+    document.querySelectorAll('.role-option').forEach(el => {
         el.classList.remove('selected');
         el.style.borderColor = '#333';
         el.style.background = 'transparent';
-      });
-      event.target.closest('.role-option').classList.add('selected');
-      event.target.closest('.role-option').style.borderColor = '#000';
-      event.target.closest('.role-option').style.background = '#f0f0f0';
+    });
+    event.target.closest('.role-option').classList.add('selected');
+    event.target.closest('.role-option').style.borderColor = '#000';
+    event.target.closest('.role-option').style.background = '#f0f0f0';
+}
+
+// === MOSTRAR PASO ===
+function showStep(n) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+    currentStep = n;
+    updateProgress();
+    
+    if (n === 5) {
+        updateCoachVisibility();
     }
+}
 
-    function updateCoachVisibility() {
-      const group = document.getElementById('coachSelectionGroup');
-      const display = document.getElementById('coachDisplay');
-      const hidden = document.getElementById('seleccionCouch');
-      const submitBtn = document.getElementById('submitBtn');
+// === AVANZAR PASO ===
+function nextStep(step) {
+    if (step === 1 && !selectedRole) {
+        alert('Por favor, selecciona si eres Coach o Retador.');
+        return;
+    }
+    showStep(step + 1);
+}
 
-      if (selectedRole === 'coach') {
+function prevStep(step) {
+    if (step > 1) showStep(step - 1);
+}
+
+// === ACTUALIZAR VISIBILIDAD DEL COACH ===
+function updateCoachVisibility() {
+    const group = document.getElementById('coachSelectionGroup');
+    const display = document.getElementById('coachDisplay');
+    const hidden = document.getElementById('seleccionCouch');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (selectedRole === 'coach') {
         group.style.display = 'none';
         display.removeAttribute('required');
         hidden.removeAttribute('required');
         hidden.value = '';
         selectedCoachName = '';
         submitBtn.textContent = 'Registrarme como Coach';
-      } else {
+    } else {
         group.style.display = 'block';
         display.setAttribute('required', 'required');
         hidden.setAttribute('required', 'required');
         submitBtn.textContent = 'Crear Cuenta como Retador';
-      }
     }
+}
 
-    function showStep(n) {
-      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-      document.getElementById('step' + n).classList.add('active');
-      currentStep = n;
-      updateProgress();
-      if (n === 5) updateCoachVisibility();
+// === PROGRESO ===
+function updateProgress() {
+    const progress = (currentStep / totalSteps) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+    for (let i = 1; i <= totalSteps; i++) {
+        const step = document.getElementById('progressStep' + i);
+        if (step) step.classList.toggle('active', i <= currentStep);
     }
+}
 
-    function nextStep(step) {
-      if (step === 1 && !selectedRole) {
-        alert('Por favor selecciona tu rol: Coach o Retador');
-        return;
-      }
-      if (validateStep(step)) showStep(step + 1);
-    }
+// === MODAL COACHES ===
+function openCoachModal() {
+    document.getElementById('coachModal').style.display = 'flex';
+    fetchCoaches();
+}
+function closeCoachModal() {
+    document.getElementById('coachModal').style.display = 'none';
+}
+function selectCoach(coachName) {
+    selectedCoachName = coachName;
+    document.getElementById('coachDisplay').value = coachName;
+    document.getElementById('seleccionCouch').value = coachName;
+    closeCoachModal();
+}
 
-    function prevStep(step) { if (step > 1) showStep(step - 1); }
-
-    function validateStep(step) {
-      // Validaciones existentes...
-      return true;
-    }
-
-    function updateProgress() {
-      const progress = (currentStep / totalSteps) * 100;
-      document.getElementById('progressBar').style.width = progress + '%';
-      for (let i = 1; i <= totalSteps; i++) {
-        document.getElementById('progressStep' + i).classList.toggle('active', i <= currentStep);
-      }
-    }
-
-    function openCoachModal() {
-      document.getElementById('coachModal').style.display = 'flex';
-      fetchCoaches();
-      document.getElementById('coachSearch').focus();
-    }
-
-    function closeCoachModal() {
-      document.getElementById('coachModal').style.display = 'none';
-      document.getElementById('coachSearch').value = '';
-    }
-
-    function selectCoach(coachName) {
-      selectedCoachName = coachName;
-      document.getElementById('coachDisplay').value = coachName;
-      document.getElementById('seleccionCouch').value = coachName;
-      closeCoachModal();
-    }
-
-    function fetchCoaches(search = '') {
-      const list = document.getElementById('coachList');
-      list.innerHTML = '<div style="padding:15px;text-align:center;">Cargando coaches...</div>';
-      fetch(`get_coaches.php?search=${encodeURIComponent(search)}`)
+// === BUSCAR COACHES ===
+function fetchCoaches(search = '') {
+    const list = document.getElementById('coachList');
+    list.innerHTML = '<div style="padding:15px;text-align:center;">Cargando...</div>';
+    fetch(`get_coaches.php?search=${encodeURIComponent(search)}`)
         .then(r => r.json())
         .then(data => {
-          list.innerHTML = '';
-          if (data.length === 0) {
-            list.innerHTML = '<div style="padding:15px;color:#666;text-align:center;">No se encontraron coaches.</div>';
-            return;
-          }
-          data.forEach(c => {
-            const item = document.createElement('div');
-            item.className = 'coach-item';
-            item.textContent = c.name;
-            item.onclick = () => selectCoach(c.name);
-            list.appendChild(item);
-          });
+            list.innerHTML = '';
+            if (!data || data.length === 0) {
+                list.innerHTML = '<div style="padding:15px;color:#666;text-align:center;">No se encontraron coaches.</div>';
+                return;
+            }
+            data.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'coach-item';
+                item.textContent = c.name;
+                item.onclick = () => selectCoach(c.name);
+                list.appendChild(item);
+            });
+        })
+        .catch(() => {
+            list.innerHTML = '<div style="padding:15px;color:red;">Error al cargar coaches.</div>';
         });
-    }
+}
 
-    function filterCoaches() {
-      clearTimeout(window.searchTimeout);
-      window.searchTimeout = setTimeout(() => {
+function filterCoaches() {
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
         fetchCoaches(document.getElementById('coachSearch').value.trim());
-      }, 300);
-    }
+    }, 300);
+}
 
-    document.getElementById('registrationForm').addEventListener('submit', e => {
-      if (selectedRole === 'retador' && !selectedCoachName) {
+// === VALIDAR ENVÍO ===
+document.getElementById('registrationForm').addEventListener('submit', function(e) {
+    if (selectedRole === 'retador' && !selectedCoachName) {
         e.preventDefault();
-        alert('Debes seleccionar un Coach para continuar como Retador.');
+        alert('Debes seleccionar un Coach para registrarte como Retador.');
         openCoachModal();
-      }
-    });
+        return false;
+    }
+    if (!selectedRole) {
+        e.preventDefault();
+        alert('Debes seleccionar un rol.');
+        showStep(1);
+        return false;
+    }
+});
 
-    // Inicializar
-    updateProgress();
-  </script>
+// === INICIALIZAR ===
+updateProgress();
+updateCoachVisibility();
+</script>
 </body>
 </html>
