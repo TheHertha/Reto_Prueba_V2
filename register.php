@@ -126,7 +126,7 @@ unset($_SESSION['error'], $_SESSION['success']);
       
       <form action="register_process.php" method="POST" id="registrationForm">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-        <input type="hidden" name="rol" id="rol" value="" required>
+        <input type="hidden" name="role" id="role" value="" required>
         <input type="hidden" name="seleccionCouch" id="seleccionCouch" value="">
 
         <!-- Paso 1: Rol -->
@@ -134,15 +134,15 @@ unset($_SESSION['error'], $_SESSION['success']);
           <div class="step-title">¿Qué tipo de usuario eres?</div>
           <div class="form-group" style="text-align:center;">
             <div style="display:flex; gap:40px; justify-content:center; flex-wrap:wrap; margin-top:50px;">
-              <div class="role-option" onclick="selectRole('retador')">
-                <input type="radio" name="temp_role" value="retador" style="display:none;">
-                <div style="font-size:28px; margin-bottom:10px;">Retador</div>
+              <div class="role-option" onclick="selectRole('user')">
+                <input type="radio" name="temp_role" value="user" style="display:none;">
+                <div style="font-size:28px; margin-bottom:10px;">Participante</div>
                 <div style="font-size:14px; color:#666;">Quiero participar en los retos</div>
               </div>
               <div class="role-option" onclick="selectRole('coach')">
                 <input type="radio" name="temp_role" value="coach" style="display:none;">
                 <div style="font-size:28px; margin-bottom:10px;">Coach</div>
-                <div style="font-size:14px; color:#666;">Quiero guiar a mis retadores</div>
+                <div style="font-size:14px; color:#666;">Quiero guiar a mis participantes</div>
               </div>
             </div>
           </div>
@@ -242,7 +242,7 @@ unset($_SESSION['error'], $_SESSION['success']);
           <div class="form-group" id="coachSelectionGroup">
             <label for="coachDisplay">Seleccione Coach <span style="color:red;">*</span></label>
             <input type="text" id="coachDisplay" placeholder="Haga clic para seleccionar un coach" readonly onclick="openCoachModal()" style="cursor:pointer;" required>
-            <small style="color:#666;">Obligatorio solo para retadores</small>
+            <small style="color:#666;">Obligatorio solo para participantes</small>
           </div>
           <div class="button-group">
             <button type="button" class="btn btn-secondary" onclick="prevStep(5)">Anterior</button>
@@ -307,7 +307,7 @@ function showStep(n) {
 // === AVANZAR PASO ===
 function nextStep(step) {
     if (step === 1 && !selectedRole) {
-        alert('Por favor, selecciona si eres Coach o Retador.');
+        alert('Por favor, selecciona si eres Coach o Participante.');
         return;
     }
     showStep(step + 1);
@@ -335,7 +335,7 @@ function updateCoachVisibility() {
         group.style.display = 'block';
         display.setAttribute('required', 'required');
         hidden.setAttribute('required', 'required');
-        submitBtn.textContent = 'Crear Cuenta como Retador';
+        submitBtn.textContent = 'Crear Cuenta como Participante';
     }
 }
 
@@ -398,9 +398,9 @@ function filterCoaches() {
 
 // === VALIDAR ENVÍO ===
 document.getElementById('registrationForm').addEventListener('submit', function(e) {
-    if (selectedRole === 'retador' && !selectedCoachName) {
+    if (selectedRole === 'user' && !selectedCoachName) {
         e.preventDefault();
-        alert('Debes seleccionar un Coach para registrarte como Retador.');
+        alert('Debes seleccionar un Coach para registrarte como Participante.');
         openCoachModal();
         return false;
     }

@@ -29,7 +29,8 @@ if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_tok
 $role = trim($_POST['role'] ?? '');
 $seleccionCouch = trim($_POST['seleccionCouch'] ?? '');
 
-if (!in_array($role, ['coach', 'retador'])) {
+// ACEPTAMOS SOLO 'user' (Participante) y 'coach'
+if (!in_array($role, ['user', 'coach'], true)) {
     $_SESSION['error'] = "Debes seleccionar un rol válido.";
     header("Location: register.php");
     exit;
@@ -46,7 +47,7 @@ $pais = $_POST['pais'];
 $telefono = preg_replace('/[^0-9]/', '', $_POST['telefono']);
 $idHerbalife = trim($_POST['idHerbalife'] ?? '');
 
-// === VALIDACIONES BÁSICAS ===
+// VALIDACIONES BÁSICAS
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $_SESSION['error'] = "Correo electrónico inválido.";
     header("Location: register.php");
@@ -66,7 +67,7 @@ if (empty($nombre) || empty($apellidoP) || empty($fechaNacimiento) || empty($gen
 try {
     $pdo->beginTransaction();
 
-    // === VERIFICAR DUPLICADOS ===
+    // VERIFICAR DUPLICADOS
     $sql = "SELECT id FROM usuarios WHERE email = :email";
     $params = [':email' => $email];
     if (!empty($idHerbalife)) {
@@ -79,8 +80,8 @@ try {
         throw new Exception("El correo o ID Herbalife ya está registrado.");
     }
 
-    // === VALIDAR COACH (solo retadores) ===
-    if ($role === 'retador') {
+    // VALIDAR COACH (solo para Participantes = 'user')
+    if ($role === 'user') {
         if (empty($seleccionCouch)) {
             throw new Exception("Debes seleccionar un Coach.");
         }
@@ -93,7 +94,7 @@ try {
         $seleccionCouch = null;
     }
 
-    // === INSERTAR USUARIO (¡CORREGIDO: 'rol' CON ACENTO!) ===
+    // INSERTAR USUARIO (¡PERFECTO CON 'rol' Y VALORES 'user'/'coach'!)
     $hashed = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $pdo->prepare("
         INSERT INTO usuarios (
@@ -115,13 +116,13 @@ try {
         $pais,
         $telefono,
         $idHerbalife ?: null,
-        $role,           // ← Valor: 'coach' o 'retador'
-        $seleccionCouch  // ← Nombre del coach o null
+        $role,           // 'user' o 'coach' → ¡COMPATIBLE CON TU ENUM!
+        $seleccionCouch
     ]);
 
     $user_id = $pdo->lastInsertId();
 
-    // === SI ES COACH → AGREGAR A TABLA COACHES ===
+    // SI ES COACH → AGREGAR A TABLA COACHES
     if ($role === 'coach') {
         $coach_name = trim("$nombre $apellidoP " . ($apellidoM ? $apellidoM : ''));
         $stmt = $pdo->prepare("INSERT IGNORE INTO coaches (name, user_id) VALUES (?, ?)");
@@ -130,11 +131,11 @@ try {
 
     $pdo->commit();
 
-    // === ÉXITO ===
+    // ÉXITO
     $_SESSION['user_id'] = $user_id;
     $_SESSION['nombre'] = $nombre;
-    $_SESSION['role'] = $role;  // 'coach' o 'retador'
-    $_SESSION['success'] = "¡Cuenta creada con éxito, " . ucfirst($role) . "!";
+    $_SESSION['role'] = $role;  // 'user' o 'coach'
+    $_SESSION['success'] = "¡Cuenta creada con éxito, " . ($role === 'user' ? 'Participante' : 'Coach') . "!";
 
     // Limpiar intentos
     unset($_SESSION[$attempt_key]);
