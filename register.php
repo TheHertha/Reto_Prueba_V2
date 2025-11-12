@@ -312,8 +312,8 @@ function checkIdHerbalife() {
 function selectRol(rol) {
     selectedRol = rol;
     document.getElementById('rol').value = rol;
-    document.getElementById('btnNextRole').disabled = false;
 
+    // Resaltar opción seleccionada
     document.querySelectorAll('.role-option').forEach(el => {
         el.classList.remove('selected');
         el.style.borderColor = '#333';
@@ -322,6 +322,9 @@ function selectRol(rol) {
     event.target.closest('.role-option').classList.add('selected');
     event.target.closest('.role-option').style.borderColor = '#000';
     event.target.closest('.role-option').style.background = '#f0f0f0';
+
+    // AVANZAR AUTOMÁTICAMENTE AL PASO 2
+    showStep(2);
 }
 
 function showStep(n) {

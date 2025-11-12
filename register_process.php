@@ -78,23 +78,31 @@ if (strlen($password) < 8) {
     $_SESSION['error'] = "La contraseña debe tener al menos 8 caracteres.";
     header("Location: register.php"); exit;
 }
-// === VALIDAR CAMPOS OBLIGATORIOS SEGÚN ROL ===
-$camposFaltantes = [];
 
-if (empty($nombre)) $camposFaltantes[] = "Nombre";
-if (empty($apellidoP)) $camposFaltantes[] = "Apellido Paterno";
-if (empty($fechaNacimiento)) $camposFaltantes[] = "Fecha de Nacimiento";
-if (empty($genero)) $camposFaltantes[] = "Género";
-if (empty($pais)) $camposFaltantes[] = "País";
-if (empty($telefono)) $camposFaltantes[] = "Teléfono";
+// === CAMPOS OBLIGATORIOS PARA AMBOS ROLES (Coach y Participante) ===
+$camposObligatorios = [
+    'Nombre' => $nombre,
+    'Apellido Paterno' => $apellidoP,
+    'Fecha de Nacimiento' => $fechaNacimiento,
+    'Género' => $genero,
+    'País' => $pais,
+    'Teléfono' => $telefono
+];
 
-// Solo validar coach si es participante
-if ($rol === 'user' && empty($seleccionCouch)) {
-    $camposFaltantes[] = "Selección de Coach";
+$faltantes = [];
+foreach ($camposObligatorios as $nombreCampo => $valor) {
+    if (empty(trim($valor))) {
+        $faltantes[] = $nombreCampo;
+    }
 }
 
-if (!empty($camposFaltantes)) {
-    $_SESSION['error'] = "Los siguientes campos son obligatorios: " . implode(", ", $camposFaltantes) . ".";
+// === SOLO PARTICIPANTE NECESITA SELECCIONAR UN COACH ===
+if ($rol === 'user' && empty($seleccionCouch)) {
+    $faltantes[] = "Selección de Coach";
+}
+
+if (!empty($faltantes)) {
+    $_SESSION['error'] = "Los siguientes campos son obligatorios: " . implode(", ", $faltantes) . ".";
     header("Location: register.php");
     exit;
 }
@@ -118,18 +126,15 @@ try {
         }
     }
 
-    // === VALIDAR COACH (solo para user) ===
+    // === VALIDAR COACH EXISTENTE (solo para participante) ===
     if ($rol === 'user') {
-        if (empty($seleccionCouch)) {
-            throw new Exception("Debes seleccionar un Coach.");
-        }
         $stmt = $pdo->prepare("SELECT id FROM coaches WHERE name = ?");
         $stmt->execute([$seleccionCouch]);
         if ($stmt->rowCount() === 0) {
             throw new Exception("El Coach seleccionado no existe.");
         }
     } else {
-        $seleccionCouch = null; // ← CLAVE: NULL para Coach
+        $seleccionCouch = null; // Coach no tiene coach → NULL
     }
 
     // === INSERTAR USUARIO ===
