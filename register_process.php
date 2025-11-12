@@ -37,28 +37,36 @@ if (!in_array($role, ['coach', 'retador'])) {
 
 $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
 $password = $_POST['password'];
-$nombre = filter_var($_POST['nombre'], FILTER_SANITIZE_STRING);
-$apellidoP = filter_var($_POST['apellidoPaterno'], FILTER_SANITIZE_STRING);
-$apellidoM = filter_var($_POST['apellidoMaterno'] ?? '', FILTER_SANITIZE_STRING);
+$nombre = trim($_POST['nombre']);
+$apellidoP = trim($_POST['apellidoPaterno']);
+$apellidoM = trim($_POST['apellidoMaterno'] ?? '');
 $fechaNacimiento = $_POST['fechaNacimiento'];
 $genero = $_POST['genero'];
 $pais = $_POST['pais'];
-$telefono = filter_var($_POST['telefono'], FILTER_SANITIZE_STRING);
-$idHerbalife = filter_var($_POST['idHerbalife'] ?? '', FILTER_SANITIZE_STRING);
+$telefono = preg_replace('/[^0-9]/', '', $_POST['telefono']);
+$idHerbalife = trim($_POST['idHerbalife'] ?? '');
 
-// Validaciones
+// === VALIDACIONES BÁSICAS ===
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $_SESSION['error'] = "Correo inválido.";
+    $_SESSION['error'] = "Correo electrónico inválido.";
+    header("Location: register.php");
+    exit;
+}
+if (strlen($password) < 8) {
+    $_SESSION['error'] = "La contraseña debe tener al menos 8 caracteres.";
+    header("Location: register.php");
+    exit;
+}
+if (empty($nombre) || empty($apellidoP) || empty($fechaNacimiento) || empty($genero) || empty($pais) || empty($telefono)) {
+    $_SESSION['error'] = "Todos los campos obligatorios deben completarse.";
     header("Location: register.php");
     exit;
 }
 
-// ... resto de validaciones ...
-
 try {
     $pdo->beginTransaction();
 
-    // Verificar duplicados
+    // === VERIFICAR DUPLICADOS ===
     $sql = "SELECT id FROM usuarios WHERE email = :email";
     $params = [':email' => $email];
     if (!empty($idHerbalife)) {
@@ -68,10 +76,10 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     if ($stmt->rowCount() > 0) {
-        throw new Exception("Correo o ID Herbalife ya registrado.");
+        throw new Exception("El correo o ID Herbalife ya está registrado.");
     }
 
-    // Validar coach si es retador
+    // === VALIDAR COACH (solo retadores) ===
     if ($role === 'retador') {
         if (empty($seleccionCouch)) {
             throw new Exception("Debes seleccionar un Coach.");
@@ -79,39 +87,65 @@ try {
         $stmt = $pdo->prepare("SELECT id FROM coaches WHERE name = ?");
         $stmt->execute([$seleccionCouch]);
         if ($stmt->rowCount() === 0) {
-            throw new Exception("Coach seleccionado no válido.");
+            throw new Exception("El Coach seleccionado no existe.");
         }
     } else {
         $seleccionCouch = null;
     }
 
-    // Insertar usuario
+    // === INSERTAR USUARIO (¡CORREGIDO: 'rol' CON ACENTO!) ===
     $hashed = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare("INSERT INTO usuarios (email, contrasena, nombre, apellido_paterno, apellido_materno, fecha_nacimiento, genero, pais, telefono, id_herbalife, role, seleccion_couch, fecha_registro) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-    $stmt->execute([$email, $hashed, $nombre, $apellidoP, $apellidoM ?: null, $fechaNacimiento, $genero, $pais, $telefono, $idHerbalife ?: null, $role, $seleccionCouch]);
+    $stmt = $pdo->prepare("
+        INSERT INTO usuarios (
+            email, contrasena, nombre, apellido_paterno, apellido_materno,
+            fecha_nacimiento, genero, pais, telefono, id_herbalife,
+            rol, seleccion_couch, fecha_registro
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
+        )
+    ");
+    $stmt->execute([
+        $email,
+        $hashed,
+        $nombre,
+        $apellidoP,
+        $apellidoM ?: null,
+        $fechaNacimiento,
+        $genero,
+        $pais,
+        $telefono,
+        $idHerbalife ?: null,
+        $role,           // ← Valor: 'coach' o 'retador'
+        $seleccionCouch  // ← Nombre del coach o null
+    ]);
 
     $user_id = $pdo->lastInsertId();
 
-    // Si es coach → agregarlo
+    // === SI ES COACH → AGREGAR A TABLA COACHES ===
     if ($role === 'coach') {
-        $coach_name = trim("$nombre $apellidoP " . ($apellidoM ?: ''));
+        $coach_name = trim("$nombre $apellidoP " . ($apellidoM ? $apellidoM : ''));
         $stmt = $pdo->prepare("INSERT IGNORE INTO coaches (name, user_id) VALUES (?, ?)");
         $stmt->execute([$coach_name, $user_id]);
     }
 
     $pdo->commit();
 
+    // === ÉXITO ===
     $_SESSION['user_id'] = $user_id;
     $_SESSION['nombre'] = $nombre;
-    $_SESSION['role'] = $role;
-    $_SESSION['success'] = "¡Bienvenido, " . ucfirst($role) . "!";
+    $_SESSION['role'] = $role;  // 'coach' o 'retador'
+    $_SESSION['success'] = "¡Cuenta creada con éxito, " . ucfirst($role) . "!";
+
+    // Limpiar intentos
+    unset($_SESSION[$attempt_key]);
 
     header("Location: prize_wheel.php");
     exit;
 
 } catch (Exception $e) {
-    $pdo->rollBack();
+    $pdo->rollBack()
     $_SESSION['error'] = $e->getMessage();
+    error_log("Error en registro: " . $e->getMessage());
     header("Location: register.php");
     exit;
 }

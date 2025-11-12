@@ -126,7 +126,7 @@ unset($_SESSION['error'], $_SESSION['success']);
       
       <form action="register_process.php" method="POST" id="registrationForm">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-        <input type="hidden" name="role" id="role" value="" required>
+        <input type="hidden" name="rol" id="rol" value="" required>
         <input type="hidden" name="seleccionCouch" id="seleccionCouch" value="">
 
         <!-- Paso 1: Rol -->
