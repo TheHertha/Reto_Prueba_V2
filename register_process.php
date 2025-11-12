@@ -78,9 +78,25 @@ if (strlen($password) < 8) {
     $_SESSION['error'] = "La contraseña debe tener al menos 8 caracteres.";
     header("Location: register.php"); exit;
 }
-if (empty($nombre) || empty($apellidoP) || empty($fechaNacimiento) || empty($genero) || empty($pais) || empty($telefono)) {
-    $_SESSION['error'] = "Todos los campos obligatorios deben completarse.";
-    header("Location: register.php"); exit;
+// === VALIDAR CAMPOS OBLIGATORIOS SEGÚN ROL ===
+$camposFaltantes = [];
+
+if (empty($nombre)) $camposFaltantes[] = "Nombre";
+if (empty($apellidoP)) $camposFaltantes[] = "Apellido Paterno";
+if (empty($fechaNacimiento)) $camposFaltantes[] = "Fecha de Nacimiento";
+if (empty($genero)) $camposFaltantes[] = "Género";
+if (empty($pais)) $camposFaltantes[] = "País";
+if (empty($telefono)) $camposFaltantes[] = "Teléfono";
+
+// Solo validar coach si es participante
+if ($rol === 'user' && empty($seleccionCouch)) {
+    $camposFaltantes[] = "Selección de Coach";
+}
+
+if (!empty($camposFaltantes)) {
+    $_SESSION['error'] = "Los siguientes campos son obligatorios: " . implode(", ", $camposFaltantes) . ".";
+    header("Location: register.php");
+    exit;
 }
 
 try {
