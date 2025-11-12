@@ -197,12 +197,12 @@ unset($_SESSION['error'], $_SESSION['success']);
           </div>
           <div class="form-group">
             <label for="genero">Género</label>
-            <select id="genero" name="genero" required>
-              <option value="" disabled selected>Seleccione</option>
-              <?php foreach ($ALLOWED_GENDERS as $value => $label): ?>
-                <option value="<?php echo htmlspecialchars($value); ?>"><?php echo htmlspecialchars($label); ?></option>
-              <?php endforeach; ?>
-            </select>
+         <select id="genero" name="genero" required>
+  <option value="" disabled selected>Seleccione</option>
+  <option value="Masculino">Masculino</option>
+  <option value="Femenino">Femenino</option>
+  <option value="Otro">Otro</option>
+</select>
           </div>
           <div class="form-group">
             <label for="pais">País</label>
@@ -435,6 +435,17 @@ document.getElementById('registrationForm').addEventListener('submit', function(
         showStep(1);
         return false;
     }
+
+    // === FORZAR CARGA DE SELECTS AL AVANZAR RÁPIDO ===
+document.addEventListener('DOMContentLoaded', function() {
+    // Forzar renderizado de selects
+    setTimeout(() => {
+        document.querySelectorAll('select').forEach(select => {
+            select.dispatchEvent(new Event('change'));
+            select.dispatchEvent(new Event('focus'));
+        });
+    }, 500);
+});
 });
 
 updateProgress();
