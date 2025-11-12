@@ -143,7 +143,7 @@ try {
     exit;
 
 } catch (Exception $e) {
-    $pdo->rollBack()
+    $pdo->rollBack();
     $_SESSION['error'] = $e->getMessage();
     error_log("Error en registro: " . $e->getMessage());
     header("Location: register.php");
