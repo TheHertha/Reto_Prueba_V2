@@ -41,7 +41,7 @@ unset($_SESSION['error'], $_SESSION['success']);
     .progress-indicators { display: flex; justify-content: space-between; align-items: center; }
     .progress-step { 
     font-size: 12px; 
-    font-weight: 300; 
+    font-weight: 300;
     color: rgba(0, 0, 0, 0.4); 
     letter-spacing: 1px; 
     text-transform: uppercase; 
@@ -84,6 +84,7 @@ unset($_SESSION['error'], $_SESSION['success']);
     .role-option { cursor: pointer; padding: 20px; border: 2px solid #333; border-radius: 8px; width: 220px; transition: all 0.3s; text-align: center; }
     .role-option:hover { border-color: #000; background: #f0f0f0; }
     .role-option.selected { border-color: #000; background: #f0f0f0; }
+    .check-status { font-size: 12px; display: block; min-height: 20px; margin-top: 5px; }
     @media (max-width: 768px) { .header { padding: 20px 30px; } .logo { left: 30px; width: 50px; height: 50px; } .title { font-size: 20px; } .container { margin: 40px auto; padding: 0 20px; } .form-wrapper { padding: 40px 20px; } }
   </style>
 </head>
@@ -117,7 +118,7 @@ unset($_SESSION['error'], $_SESSION['success']);
       
       <form action="register_process.php" method="POST" id="registrationForm">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-        <input type="hidden" name="rol" id="rol" value="" required> <!-- CAMBIADO: rol -->
+        <input type="hidden" name="rol" id="rol" value="" required>
         <input type="hidden" name="seleccionCouch" id="seleccionCouch" value="">
 
         <!-- Paso 1: Rol -->
@@ -147,8 +148,8 @@ unset($_SESSION['error'], $_SESSION['success']);
           <div class="step-title">Información de Cuenta</div>
           <div class="form-group">
             <label for="email">Correo Electrónico</label>
-            <input type="email" id="email" name="email" placeholder="micorreo@gmail.com" required>
-            <span id="email-check" style="color:red;font-size:12px;"></span>
+            <input type="email" id="email" name="email" placeholder="micorreo@gmail.com" required oninput="checkEmail()">
+            <span id="email-check" class="check-status"></span>
           </div>
           <div class="form-group">
             <label for="password">Contraseña</label>
@@ -227,12 +228,12 @@ unset($_SESSION['error'], $_SESSION['success']);
           </div>
           <div class="form-group">
             <label for="idHerbalife">ID de Herbalife <small>(opcional)</small></label>
-            <input type="text" id="idHerbalife" name="idHerbalife">
-            <span id="id-check" style="color:red;font-size:12px;"></span>
+            <input type="text" id="idHerbalife" name="idHerbalife" oninput="checkIdHerbalife()">
+            <span id="id-check" class="check-status"><small style="color:#666;">Opcional</small></span>
           </div>
           <div class="form-group" id="coachSelectionGroup">
             <label for="coachDisplay">Seleccione Coach <span style="color:red;">*</span></label>
-            <input type="text" id="coachDisplay" placeholder="Haga clic para seleccionar un coach" readonly onclick="openCoachModal()" style="cursor:pointer;" required>
+            <input type="text" id="coachDisplay" placeholder="Haga clic para seleccionar un coach" readonly onclick="openCoachModal()" style="cursor:pointer;">
             <small style="color:#666;">Obligatorio solo para participantes</small>
           </div>
           <div class="button-group">
@@ -261,14 +262,56 @@ unset($_SESSION['error'], $_SESSION['success']);
 <script>
 let currentStep = 1;
 const totalSteps = 5;
-let selectedRol = '';  // CAMBIADO: selectedRol
+let selectedRol = '';
 let selectedCoachName = '';
 
-// CAMBIADO: selectRol
+// VALIDACIÓN EMAIL EN TIEMPO REAL
+function checkEmail() {
+    const email = document.getElementById('email').value.trim();
+    const status = document.getElementById('email-check');
+    if (email.length < 5) {
+        status.innerHTML = '';
+        return;
+    }
+    fetch('register_process.php?check_email=' + encodeURIComponent(email))
+        .then(r => r.json())
+        .then(data => {
+            if (data.exists) {
+                status.innerHTML = '<span style="color:red;">Este correo ya está registrado</span>';
+            } else {
+                status.innerHTML = '<span style="color:green;">Disponible</span>';
+            }
+        })
+        .catch(() => {
+            status.innerHTML = '<span style="color:orange;">Error de conexión</span>';
+        });
+}
+
+// VALIDACIÓN ID HERBALIFE EN TIEMPO REAL
+function checkIdHerbalife() {
+    const id = document.getElementById('idHerbalife').value.trim();
+    const status = document.getElementById('id-check');
+    if (id === '') {
+        status.innerHTML = '<small style="color:#666;">Opcional</small>';
+        return;
+    }
+    fetch('register_process.php?check_id=' + encodeURIComponent(id))
+        .then(r => r.json())
+        .then(data => {
+            if (data.exists) {
+                status.innerHTML = '<span style="color:red;">Este ID ya está registrado</span>';
+            } else {
+                status.innerHTML = '<span style="color:green;">Disponible</span>';
+            }
+        })
+        .catch(() => {
+            status.innerHTML = '<span style="color:orange;">Error de conexión</span>';
+        });
+}
+
 function selectRol(rol) {
     selectedRol = rol;
-    document.getElementById('rol').value = rol;  // rol con acento
-
+    document.getElementById('rol').value = rol;
     document.getElementById('btnNextRole').disabled = false;
 
     document.querySelectorAll('.role-option').forEach(el => {

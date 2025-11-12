@@ -4,6 +4,28 @@ error_reporting(E_ALL);
 require_once 'config.php';
 session_start();
 
+// === VALIDACIÓN AJAX EN TIEMPO REAL (SIN ARCHIVOS EXTRA) ===
+if (isset($_GET['check_email'])) {
+    $email = trim($_GET['check_email']);
+    $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
+    $stmt->execute([$email]);
+    echo json_encode(['exists' => $stmt->rowCount() > 0]);
+    exit;
+}
+
+if (isset($_GET['check_id'])) {
+    $id = trim($_GET['check_id']);
+    if ($id === '') {
+        echo json_encode(['exists' => false]);
+        exit;
+    }
+    $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE id_herbalife = ? AND id_herbalife != ''");
+    $stmt->execute([$id]);
+    echo json_encode(['exists' => $stmt->rowCount() > 0]);
+    exit;
+}
+
+// === REGISTRO NORMAL ===
 $ip_address = $_SERVER['REMOTE_ADDR'];
 $attempt_key = 'register_attempts_' . $ip_address;
 $attempts = $_SESSION[$attempt_key] ?? 0;
@@ -21,18 +43,17 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 }
 
 if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-    $_SESSION['error'] = "Error de seguridad.";
+    $_SESSION['error'] = "Error de seguridad (CSRF).";
     header("Location: register.php");
     exit;
 }
 
-// === USAMOS rol (con acento) ===
+// === RECIBIR DATOS DEL FORMULARIO ===
 $rol = trim($_POST['rol'] ?? '');
 $seleccionCouch = trim($_POST['seleccionCouch'] ?? '');
 
-// VALIDAMOS QUE SEA 'user' o 'coach'
 if (!in_array($rol, ['user', 'coach'], true)) {
-    $_SESSION['error'] = "Debes seleccionar un rol válido.";
+    $_SESSION['error'] = "Debes seleccionar si eres Participante o Coach.";
     header("Location: register.php");
     exit;
 }
@@ -65,17 +86,20 @@ if (empty($nombre) || empty($apellidoP) || empty($fechaNacimiento) || empty($gen
 try {
     $pdo->beginTransaction();
 
-    // === VERIFICAR DUPLICADOS ===
-    $sql = "SELECT id FROM usuarios WHERE email = :email";
-    $params = [':email' => $email];
-    if (!empty($idHerbalife)) {
-        $sql .= " OR id_herbalife = :id_herbalife";
-        $params[':id_herbalife'] = $idHerbalife;
-    }
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    // === VERIFICAR EMAIL DUPLICADO ===
+    $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
+    $stmt->execute([$email]);
     if ($stmt->rowCount() > 0) {
-        throw new Exception("El correo o ID Herbalife ya está registrado.");
+        throw new Exception("Este correo ya está registrado.");
+    }
+
+    // === VERIFICAR ID HERBALIFE DUPLICADO (si se ingresó) ===
+    if (!empty($idHerbalife)) {
+        $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE id_herbalife = ?");
+        $stmt->execute([$idHerbalife]);
+        if ($stmt->rowCount() > 0) {
+            throw new Exception("Este ID Herbalife ya está registrado.");
+        }
     }
 
     // === VALIDAR COACH (solo para user) ===
@@ -89,10 +113,10 @@ try {
             throw new Exception("El Coach seleccionado no existe.");
         }
     } else {
-        $seleccionCouch = null;
+        $seleccionCouch = null; // ← CLAVE: NULL para Coach
     }
 
-    // === INSERTAR USUARIO (100% COMPATIBLE CON TU TABLA REAL) ===
+    // === INSERTAR USUARIO ===
     $hashed = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $pdo->prepare("
         INSERT INTO usuarios (
@@ -113,16 +137,16 @@ try {
         $genero,
         $pais,
         $telefono,
-        $idHerbalife ?: null,
+        !empty($idHerbalife) ? $idHerbalife : null,
         $seleccionCouch,
-        $rol  // 'user' o 'coach' → TU ENUM LO ACEPTA PERFECTO
+        $rol
     ]);
 
     $user_id = $pdo->lastInsertId();
 
     // === SI ES COACH → AGREGAR A TABLA coaches ===
     if ($rol === 'coach') {
-        $coach_name = trim("$nombre $apellidoP " . ($apellidoM ? $apellidoM : ''));
+        $coach_name = trim("$nombre $apellidoP " . ($apellidoM ?: ''));
         $stmt = $pdo->prepare("INSERT IGNORE INTO coaches (name, user_id) VALUES (?, ?)");
         $stmt->execute([$coach_name, $user_id]);
     }
@@ -142,7 +166,7 @@ try {
 } catch (Exception $e) {
     $pdo->rollBack();
     $_SESSION['error'] = $e->getMessage();
-    error_log("Error registro: " . $e->getMessage());
+    error_log("Error en registro: " . $e->getMessage() . " | IP: $ip_address");
     header("Location: register.php");
     exit;
 }
