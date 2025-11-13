@@ -368,6 +368,26 @@ function updateCoachVisibility() {
     }
 }
 
+// ...existing code...
+// Toggle password visibility
+const togglePassword = document.getElementById('togglePassword');
+const passwordInput = document.getElementById('password');
+const eyeOpen = document.getElementById('eyeOpen');
+const eyeClosed = document.getElementById('eyeClosed');
+
+if (togglePassword && passwordInput && eyeOpen && eyeClosed) {
+  togglePassword.addEventListener('click', function(e) {
+    e.preventDefault();
+    const isHidden = passwordInput.getAttribute('type') === 'password';
+    passwordInput.setAttribute('type', isHidden ? 'text' : 'password');
+    eyeOpen.style.display = isHidden ? 'inline' : 'none';
+    eyeClosed.style.display = isHidden ? 'none' : 'inline';
+  });
+}
+// ...existing code...
+{ updateProgress(); updateCoachVisibility(); }
+// ...existing code...
+
 function updateProgress() {
     const progress = (currentStep / totalSteps) * 100;
     document.getElementById('progressBar').style.width = progress + '%';
