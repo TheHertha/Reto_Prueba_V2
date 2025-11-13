@@ -138,7 +138,7 @@ try {
     }
 
     // === INSERTAR USUARIO ===
-    $hashed = password_hash($password, PASSWORD_DEFAULT);
+    $hashed = $password;
     $stmt = $pdo->prepare("
         INSERT INTO usuarios (
             email, contrasena, nombre, apellido_paterno, apellido_materno,
