@@ -143,9 +143,9 @@ try {
         INSERT INTO usuarios (
             email, contrasena, nombre, apellido_paterno, apellido_materno,
             fecha_nacimiento, genero, pais, telefono, id_herbalife,
-            seleccion_couch, rol, habilitado
+            seleccion_couch, rol
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
     ");
     $stmt->execute([
