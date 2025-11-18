@@ -2,8 +2,8 @@
 session_start();
 require_once 'config.php';
 
-// Set timezone to CST (adjust if your server uses a different timezone)
-$pdo->exec("SET time_zone = '-06:00'"); // CST is UTC-6
+
+$pdo->exec("SET time_zone = '-06:00'");
 
 // Check if user is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'admin') {
