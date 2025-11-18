@@ -435,6 +435,7 @@ try {
                 <a href="ranking.php" class="nav-item">Ranking</a>
                 <a href="admin_reto.php" class="nav-item active">Administrar Reto</a>
                 <a href="inventario.php" class="nav-item">Inventario</a>
+                <a href="export_datos_semanales.php" class="nav-item">Descargar Excel</a>
             </nav>
         </aside>
         <main class="main-content">
