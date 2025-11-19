@@ -128,13 +128,13 @@ unset($_SESSION['error'], $_SESSION['success']);
             <div style="display:flex; gap:40px; justify-content:center; flex-wrap:wrap; margin-top:50px;">
               <div class="role-option" onclick="selectRol('user')">
                 <input type="radio" name="temp_rol" value="user" style="display:none;">
-                <div style="font-size:28px; margin-bottom:10px;">Participante</div>
+                <div style="font-size:28px; margin-bottom:10px;">Retador</div>
                 <div style="font-size:14px; color:#666;">Quiero participar en los retos</div>
               </div>
               <div class="role-option" onclick="selectRol('coach')">
                 <input type="radio" name="temp_rol" value="coach" style="display:none;">
                 <div style="font-size:28px; margin-bottom:10px;">Coach</div>
-                <div style="font-size:14px; color:#666;">Quiero guiar a mis participantes</div>
+                <div style="font-size:14px; color:#666;">Quiero guiar a mis Retadores</div>
               </div>
             </div>
           </div>
@@ -234,7 +234,7 @@ unset($_SESSION['error'], $_SESSION['success']);
           <div class="form-group" id="coachSelectionGroup">
             <label for="coachDisplay">Seleccione Coach <span style="color:red;">*</span></label>
             <input type="text" id="coachDisplay" placeholder="Haga clic para seleccionar un coach" readonly onclick="openCoachModal()" style="cursor:pointer;">
-            <small style="color:#666;">Obligatorio solo para participantes</small>
+            <small style="color:#666;">Obligatorio solo para Retadores</small>
           </div>
           <div class="button-group">
             <button type="button" class="btn btn-secondary" onclick="prevStep(5)">Anterior</button>
@@ -337,7 +337,7 @@ function showStep(n) {
 
 function nextStep(step) {
     if (step === 1 && !selectedRol) {
-        alert('Por favor, selecciona si eres Coach o Participante.');
+        alert('Por favor, selecciona si eres Coach o Retador.');
         return;
     }
     showStep(step + 1);
@@ -364,7 +364,7 @@ function updateCoachVisibility() {
         group.style.display = 'block';
         display.setAttribute('required', 'required');
         hidden.setAttribute('required', 'required');
-        submitBtn.textContent = 'Crear Cuenta como Participante';
+        submitBtn.textContent = 'Crear Cuenta como Retador';
     }
 }
 
@@ -445,7 +445,7 @@ function filterCoaches() {
 document.getElementById('registrationForm').addEventListener('submit', function(e) {
     if (selectedRol === 'user' && !selectedCoachName) {
         e.preventDefault();
-        alert('Debes seleccionar un Coach para registrarte como Participante.');
+        alert('Debes seleccionar un Coach para registrarte como Retador.');
         openCoachModal();
         return false;
     }
