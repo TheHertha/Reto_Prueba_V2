@@ -706,7 +706,6 @@ body {
     <button type="submit" class="login-btn">Entrar</button>
     <div class="form-links">
       <a href="register.php">¿No tienes cuenta? Regístrate aquí</a>
-      <a href="recuperar.php">¿Olvidaste tu contraseña?</a>
     </div>
 </form>
             </div>

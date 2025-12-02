@@ -2,7 +2,6 @@
 session_start();
 require_once 'config.php';
 
-
 $pdo->exec("SET time_zone = '-06:00'");
 
 // Check if user is admin
@@ -28,17 +27,14 @@ try {
     $active_reto = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$active_reto) {
-        // No active reto, check for retos starting exactly today
         $stmt = $pdo->prepare("SELECT id FROM retos WHERE DATE(start_date) = CURDATE() AND id NOT IN (SELECT reto_id FROM disable_log)");
         $stmt->execute();
         $started_retos = $stmt->fetchAll(PDO::FETCH_COLUMN);
         if (!empty($started_retos)) {
-            // Disable all non-admin users
             $stmt = $pdo->prepare("UPDATE usuarios SET habilitado = 0 WHERE rol != 'admin'");
             $stmt->execute();
             $disabled_count = $stmt->rowCount();
             
-            // Log each started reto
             foreach ($started_retos as $reto_id) {
                 $stmt = $pdo->prepare("INSERT INTO disable_log (reto_id, disabled_at) VALUES (:reto_id, NOW())");
                 $stmt->execute(['reto_id' => $reto_id]);
@@ -51,7 +47,6 @@ try {
 
     // Handle AJAX requests
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Validate CSRF token
         if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $csrf_token) {
             ob_clean();
             header('Content-Type: application/json');
@@ -65,7 +60,6 @@ try {
             $start_date = $_POST['start_date'] ?? '';
             $end_date = $_POST['end_date'] ?? '';
 
-            // Validate dates
             if (!$start_date || !$end_date || strtotime($end_date) <= strtotime($start_date)) {
                 ob_clean();
                 header('Content-Type: application/json');
@@ -74,7 +68,6 @@ try {
                 exit;
             }
 
-            // Check for overlapping retos
             $stmt = $pdo->prepare("SELECT id FROM retos WHERE (start_date <= :end_date AND end_date >= :start_date)");
             $stmt->execute(['start_date' => $start_date, 'end_date' => $end_date]);
             if ($stmt->fetch()) {
@@ -86,28 +79,21 @@ try {
             }
 
             $pdo->beginTransaction();
-
-            // Insert new reto
             $stmt = $pdo->prepare("INSERT INTO retos (start_date, end_date) VALUES (:start_date, :end_date)");
             $stmt->execute(['start_date' => $start_date, 'end_date' => $end_date]);
             $new_reto_id = $pdo->lastInsertId();
 
-            // Check if new reto starts today and no active reto exists
             if (strtotime($start_date) <= time()) {
                 $stmt = $pdo->prepare("SELECT id FROM retos WHERE start_date <= CURDATE() AND end_date >= CURDATE() AND id != :new_reto_id");
                 $stmt->execute(['new_reto_id' => $new_reto_id]);
                 $active_reto = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if (!$active_reto && date('Y-m-d', strtotime($start_date)) === date('Y-m-d')) {
-                    // No active reto and starts today, disable users
                     $stmt = $pdo->prepare("UPDATE usuarios SET habilitado = 0 WHERE rol != 'admin'");
                     $stmt->execute();
                     $disabled_count = $stmt->rowCount();
-                    
-                    // Log the new reto
                     $stmt = $pdo->prepare("INSERT INTO disable_log (reto_id, disabled_at) VALUES (:reto_id, NOW())");
                     $stmt->execute(['reto_id' => $new_reto_id]);
-                    
                     error_log("admin_reto.php: Disabled $disabled_count non-admin users for new reto id=$new_reto_id starting on $start_date");
                 }
             }
@@ -167,7 +153,6 @@ try {
                 exit;
             }
 
-            // Check for existing position
             $stmt = $pdo->prepare("SELECT id FROM rankings WHERE reto_id = :reto_id AND tipo = :tipo AND posicion = :posicion");
             $stmt->execute(['reto_id' => $reto_id, 'tipo' => $tipo, 'posicion' => $posicion]);
             if ($stmt->fetch()) {
@@ -299,7 +284,6 @@ try {
             exit;
         }
 
-        // Invalid POST request
         ob_clean();
         header('Content-Type: application/json');
         echo json_encode(['error' => true, 'message' => 'Solicitud inválida.']);
@@ -307,12 +291,27 @@ try {
         exit;
     }
 
-    // Fetch all retos and users
+    // === CARGA DE DATOS CON CAMBIOS APLICADOS ===
     $stmt = $pdo->query("SELECT id, start_date, end_date FROM retos ORDER BY start_date DESC");
     $retos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $stmt = $pdo->prepare("SELECT id, nombre, rol, habilitado, contrasena FROM usuarios ORDER BY nombre");
+
+    // CONSULTA ACTUALIZADA: ahora incluye email y apellidos
+    $stmt = $pdo->prepare("
+        SELECT 
+            id, 
+            email, 
+            nombre, 
+            apellido_paterno, 
+            apellido_materno, 
+            rol, 
+            habilitado, 
+            contrasena 
+        FROM usuarios 
+        ORDER BY apellido_paterno ASC, apellido_materno ASC, nombre ASC
+    ");
     $stmt->execute();
     $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
@@ -442,6 +441,7 @@ try {
             <header class="main-header">
                 <h1>Administrar Reto 2025</h1>
             </header>
+
             <div class="content">
                 <?php if (isset($_SESSION['success'])): ?>
                     <div class="alert alert-success">
@@ -506,11 +506,11 @@ try {
                     </table>
                 </div>
 
-                <!-- Administrar Usuarios -->
+            <!-- === TABLA DE USUARIOS - TOTALMENTE ACTUALIZADA === -->
                 <div class="users-section">
                     <h2>Administrar Usuarios</h2>
                     <div class="search-filter">
-                        <input type="text" id="search-users" placeholder="Buscar por nombre...">
+                        <input type="text" id="search-users" placeholder="Buscar por email o nombre completo...">
                         <select id="filter-habilitado">
                             <option value="all">Todos los estados</option>
                             <option value="1">Activo</option>
@@ -523,10 +523,12 @@ try {
                             <option value="user">Usuario</option>
                         </select>
                     </div>
+
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Nombre</th>
+                                <th>Email</th> <!-- NUEVA COLUMNA PRIMERA -->
+                                <th>Nombre Completo</th> <!-- NUEVA COLUMNA -->
                                 <th>Rol</th>
                                 <th>Contraseña</th>
                                 <th>Estado</th>
@@ -534,11 +536,16 @@ try {
                             </tr>
                         </thead>
                         <tbody id="users-table">
-                            <?php foreach ($usuarios as $usuario): ?>
+                            <?php foreach ($usuarios as $usuario): 
+                                $nombre_completo = trim($usuario['nombre'] . ' ' . $usuario['apellido_paterno'] . ' ' . ($usuario['apellido_materno'] ?? ''));
+                                $nombre_completo = trim($nombre_completo);
+                            ?>
                                 <tr data-user-id="<?php echo $usuario['id']; ?>">
-                                    <td><?php echo htmlspecialchars($usuario['nombre']); ?></td>
+                                    <td><?php echo htmlspecialchars($usuario['email']); ?></td>
+                                    <td><?php echo htmlspecialchars($nombre_completo); ?></td>
                                     <td>
-                                        <select class="change-role-select" <?php echo $usuario['id'] === $_SESSION['user_id'] || $usuario['rol'] === 'admin' ? 'disabled' : ''; ?>>
+                                        <select class="change-role-select" data-user-id="<?php echo $usuario['id']; ?>"
+                                            <?php echo ($usuario['id'] == $_SESSION['user_id'] || $usuario['rol'] === 'admin') ? 'disabled' : ''; ?>>
                                             <option value="user" <?php echo $usuario['rol'] === 'user' ? 'selected' : ''; ?>>Usuario</option>
                                             <option value="coach" <?php echo $usuario['rol'] === 'coach' ? 'selected' : ''; ?>>Coach</option>
                                             <option value="admin" <?php echo $usuario['rol'] === 'admin' ? 'selected' : ''; ?>>Administrador</option>
@@ -547,16 +554,16 @@ try {
                                     <td><?php echo htmlspecialchars($usuario['contrasena']); ?></td>
                                     <td class="user-status"><?php echo $usuario['habilitado'] ? 'Habilitado' : 'Deshabilitado'; ?></td>
                                     <td>
-                                        <button class="btn btn-toggle toggle-habilitado" data-user-id="<?php echo $usuario['id']; ?>" <?php echo $usuario['id'] === $_SESSION['user_id'] || $usuario['rol'] === 'admin' ? 'disabled' : ''; ?>>
+                                        <button class="btn btn-toggle toggle-habilitado" 
+                                                data-user-id="<?php echo $usuario['id']; ?>" 
+                                                <?php echo ($usuario['id'] == $_SESSION['user_id'] || $usuario['rol'] === 'admin') ? 'disabled' : ''; ?>>
                                             <?php echo $usuario['habilitado'] ? 'Deshabilitar' : 'Habilitar'; ?>
                                         </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($usuarios)): ?>
-                                <tr>
-                                    <td colspan="5">No hay usuarios disponibles.</td>
-                                </tr>
+                                <tr><td colspan="6">No hay usuarios disponibles.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
