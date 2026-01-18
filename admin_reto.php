@@ -185,6 +185,86 @@ try {
             exit;
         }
 
+        // Handle user deletion (eliminación física)
+        if (isset($_POST['delete_user'])) {
+            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+
+            if (!$user_id) {
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => 'ID de usuario inválido']);
+                error_log("admin_reto.php: Intento de eliminación con user_id inválido");
+                exit;
+            }
+
+            if ($user_id === (int)$_SESSION['user_id']) {
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => 'No puedes eliminar tu propia cuenta']);
+                error_log("admin_reto.php: Intento de auto-eliminación - user_id=$user_id");
+                exit;
+            }
+
+            $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE id = :user_id");
+            $stmt->execute(['user_id' => $user_id]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => 'Usuario no encontrado']);
+                error_log("admin_reto.php: Usuario no encontrado al intentar eliminar - id=$user_id");
+                exit;
+            }
+
+            if ($user['rol'] === 'admin') {
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => 'No está permitido eliminar cuentas de administrador']);
+                error_log("admin_reto.php: Intento de eliminar administrador - id=$user_id");
+                exit;
+            }
+
+            try {
+                $pdo->beginTransaction();
+
+                // Eliminar primero cualquier registro relacionado en rankings
+                $stmt = $pdo->prepare("DELETE FROM rankings WHERE usuario_id = :user_id");
+                $stmt->execute(['user_id' => $user_id]);
+
+                // Si existen otras tablas relacionadas, agrega aquí las eliminaciones correspondientes
+                // Ejemplo:
+                // $stmt = $pdo->prepare("DELETE FROM participaciones WHERE usuario_id = :user_id");
+                // $stmt->execute(['user_id' => $user_id]);
+
+                // Finalmente eliminar el usuario
+                $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = :user_id");
+                $stmt->execute(['user_id' => $user_id]);
+
+                $pdo->commit();
+
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Usuario eliminado correctamente',
+                    'deleted_user_id' => $user_id
+                ]);
+                error_log("admin_reto.php: Usuario eliminado exitosamente - id=$user_id por admin {$_SESSION['user_id']}");
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $msg = 'Error al eliminar el usuario';
+                if (stripos($e->getMessage(), 'foreign key') !== false || stripos($e->getMessage(), 'constraint') !== false) {
+                    $msg = 'No se puede eliminar: el usuario tiene datos asociados que impiden su eliminación.';
+                }
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['error' => true, 'message' => $msg]);
+                error_log("admin_reto.php: Error al eliminar usuario id=$user_id - " . $e->getMessage());
+            }
+            exit;
+        }
+
         // Handle toggle user
         if (isset($_POST['toggle_habilitado'])) {
             $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
@@ -291,11 +371,10 @@ try {
         exit;
     }
 
-    // === CARGA DE DATOS CON CAMBIOS APLICADOS ===
+    // Fetch all retos and users
     $stmt = $pdo->query("SELECT id, start_date, end_date FROM retos ORDER BY start_date DESC");
     $retos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // CONSULTA ACTUALIZADA: ahora incluye email y apellidos
     $stmt = $pdo->prepare("
         SELECT 
             id, 
@@ -372,6 +451,22 @@ try {
         .btn-toggle:hover::before { width: 100%; }
         .btn-toggle:hover { color: #000000; }
         .btn-toggle:disabled { background: #666; color: #999; border: 1px solid #666; cursor: not-allowed; }
+        .btn-delete {
+            background: #c62828;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .btn-delete:hover {
+            background: #b71c1c;
+        }
+        .btn-delete:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
         .retos-section, .users-section, .rankings-section { margin-bottom: 40px; }
         .retos-section h2, .users-section h2, .rankings-section h2 { font-size: 1.5rem; font-weight: 400; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; color: #000000; }
         .data-table { width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -382,7 +477,6 @@ try {
         .search-filter input, .search-filter select { padding: 10px; font-size: 1rem; border: 1px solid #ddd; border-radius: 6px; transition: border-color 0.3s ease; flex: 1; min-width: 150px; }
         .search-filter input:focus, .search-filter select:focus { border-color: #FFD700; box-shadow: 0 0 6px rgba(255, 215, 0, 0.3); outline: none; }
 
-        /* Estilo para select de rol */
         .change-role-select {
             padding: 6px 10px;
             font-size: 0.9rem;
@@ -506,7 +600,7 @@ try {
                     </table>
                 </div>
 
-            <!-- === TABLA DE USUARIOS - TOTALMENTE ACTUALIZADA === -->
+                <!-- Administrar Usuarios -->
                 <div class="users-section">
                     <h2>Administrar Usuarios</h2>
                     <div class="search-filter">
@@ -527,8 +621,8 @@ try {
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Email</th> <!-- NUEVA COLUMNA PRIMERA -->
-                                <th>Nombre Completo</th> <!-- NUEVA COLUMNA -->
+                                <th>Email</th>
+                                <th>Nombre Completo</th>
                                 <th>Rol</th>
                                 <th>Contraseña</th>
                                 <th>Estado</th>
@@ -572,7 +666,7 @@ try {
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($usuarios)): ?>
-                                <tr><td colspan="6">No hay usuarios disponibles.</td></tr>
+                                <tr><td colspan="7">No hay usuarios disponibles.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -704,7 +798,6 @@ try {
             });
         }
 
-        // Attach event listeners to filters
         document.getElementById('search-users').addEventListener('input', filterUsers);
         document.getElementById('filter-habilitado').addEventListener('change', filterUsers);
         document.getElementById('filter-rol').addEventListener('change', filterUsers);
@@ -717,10 +810,7 @@ try {
             try {
                 submitButton.disabled = true;
                 submitButton.textContent = 'Creando...';
-                const response = await fetch('', {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch('', { method: 'POST', body: formData });
                 const result = await response.json();
                 if (result.success) {
                     const alert = document.createElement('div');
@@ -760,10 +850,7 @@ try {
                 try {
                     this.disabled = true;
                     this.textContent = 'Procesando...';
-                    const response = await fetch('', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    const response = await fetch('', { method: 'POST', body: formData });
                     const result = await response.json();
                     if (result.success) {
                         this.textContent = result.habilitado ? 'Deshabilitar' : 'Habilitar';
@@ -806,10 +893,7 @@ try {
 
                 try {
                     this.disabled = true;
-                    const response = await fetch('', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    const response = await fetch('', { method: 'POST', body: formData });
                     const result = await response.json();
                     if (result.success) {
                         const alert = document.createElement('div');
@@ -817,7 +901,7 @@ try {
                         alert.innerHTML = `${result.message} <button class="alert-close">×</button>`;
                         document.querySelector('.content').prepend(alert);
                         alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
-                        filterUsers(); // Re-filtrar
+                        filterUsers();
                     } else {
                         this.value = this.dataset.previousValue;
                         const alert = document.createElement('div');
@@ -838,7 +922,6 @@ try {
                 }
             });
 
-            // Store previous value for rollback
             select.dataset.previousValue = select.value;
             select.addEventListener('focus', function() {
                 this.dataset.previousValue = this.value;
@@ -854,10 +937,7 @@ try {
                 try {
                     submitButton.disabled = true;
                     submitButton.textContent = 'Actualizando...';
-                    const response = await fetch('', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    const response = await fetch('', { method: 'POST', body: formData });
                     const result = await response.json();
                     if (result.success) {
                         const alert = document.createElement('div');
@@ -886,74 +966,72 @@ try {
             });
         });
 
-        
-// Eliminar usuario
-document.querySelectorAll('.delete-user').forEach(button => {
-    button.addEventListener('click', async function() {
-        if (this.disabled) return;
+        // Eliminar usuario
+        document.querySelectorAll('.delete-user').forEach(button => {
+            button.addEventListener('click', async function() {
+                if (this.disabled) return;
 
-        const userId = this.dataset.userId;
-        const userName = this.dataset.userName || 'este usuario';
+                const userId = this.dataset.userId;
+                const userName = this.dataset.userName || 'este usuario';
 
-        if (!confirm(`¿Realmente deseas ELIMINAR al usuario "${userName}"?`)) {
-            return;
-        }
+                if (!confirm(`¿Realmente deseas ELIMINAR al usuario "${userName}"?\n\nEsta acción eliminará también sus posiciones en rankings.`)) {
+                    return;
+                }
 
-        if (!confirm(`¡ATENCIÓN!\nEsta acción es IRREVERSIBLE.\n\n¿Estás completamente seguro?`)) {
-            return;
-        }
+                if (!confirm(`¡ÚLTIMA CONFIRMACIÓN!\nEsta acción es IRREVERSIBLE.\n¿Estás 100% seguro?`)) {
+                    return;
+                }
 
-        const formData = new FormData();
-        formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>');
-        formData.append('delete_user', '1');
-        formData.append('user_id', userId);
+                const formData = new FormData();
+                formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>');
+                formData.append('delete_user', '1');
+                formData.append('user_id', userId);
 
-        try {
-            this.disabled = true;
-            this.textContent = 'Eliminando...';
+                try {
+                    this.disabled = true;
+                    this.textContent = 'Eliminando...';
 
-            const response = await fetch('', {
-                method: 'POST',
-                body: formData
+                    const response = await fetch('', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const row = this.closest('tr');
+                        row.style.transition = 'opacity 0.6s ease';
+                        row.style.opacity = '0';
+
+                        setTimeout(() => {
+                            row.remove();
+                            filterUsers(); // Refrescar filtro después de eliminar
+                        }, 600);
+
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-success';
+                        alert.innerHTML = `${result.message} <button class="alert-close">×</button>`;
+                        document.querySelector('.content').prepend(alert);
+                        alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                    } else {
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-error';
+                        alert.innerHTML = `${result.message || 'No se pudo eliminar el usuario'} <button class="alert-close">×</button>`;
+                        document.querySelector('.content').prepend(alert);
+                        alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                    }
+                } catch (error) {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-error';
+                    alert.innerHTML = `Error de conexión al intentar eliminar: ${error.message} <button class="alert-close">×</button>`;
+                    document.querySelector('.content').prepend(alert);
+                    alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                } finally {
+                    this.disabled = false;
+                    this.textContent = 'Eliminar';
+                }
             });
-
-            const result = await response.json();
-
-            if (result.success) {
-                const row = this.closest('tr');
-                row.style.transition = 'opacity 0.6s ease';
-                row.style.opacity = '0';
-
-                setTimeout(() => {
-                    row.remove();
-                    filterUsers(); // Refrescar filtro después de eliminar
-                }, 600);
-
-                const alert = document.createElement('div');
-                alert.className = 'alert alert-success';
-                alert.innerHTML = `${result.message} <button class="alert-close">×</button>`;
-                document.querySelector('.content').prepend(alert);
-                alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
-            } else {
-                const alert = document.createElement('div');
-                alert.className = 'alert alert-error';
-                alert.innerHTML = `${result.message || 'No se pudo eliminar el usuario'} <button class="alert-close">×</button>`;
-                document.querySelector('.content').prepend(alert);
-                alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
-            }
-        } catch (error) {
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-error';
-            alert.innerHTML = `Error de conexión al intentar eliminar: ${error.message} <button class="alert-close">×</button>`;
-            document.querySelector('.content').prepend(alert);
-            alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
-        } finally {
-            this.disabled = false;
-            this.textContent = 'Eliminar';
-        }
-    });
-});
-
+        });
     </script>
 </body>
 </html>
