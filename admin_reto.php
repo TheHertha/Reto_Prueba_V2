@@ -533,6 +533,7 @@ try {
                                 <th>Contraseña</th>
                                 <th>Estado</th>
                                 <th>Acción</th>
+                                <th>Eliminar</th>
                             </tr>
                         </thead>
                         <tbody id="users-table">
@@ -558,6 +559,14 @@ try {
                                                 data-user-id="<?php echo $usuario['id']; ?>" 
                                                 <?php echo ($usuario['id'] == $_SESSION['user_id'] || $usuario['rol'] === 'admin') ? 'disabled' : ''; ?>>
                                             <?php echo $usuario['habilitado'] ? 'Deshabilitar' : 'Habilitar'; ?>
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-delete delete-user"
+                                                data-user-id="<?php echo $usuario['id']; ?>"
+                                                data-user-name="<?php echo htmlspecialchars($nombre_completo); ?>"
+                                                <?php echo ($usuario['id'] == $_SESSION['user_id'] || $usuario['rol'] === 'admin') ? 'disabled' : ''; ?>>
+                                            Eliminar
                                         </button>
                                     </td>
                                 </tr>
@@ -876,6 +885,75 @@ try {
                 }
             });
         });
+
+        
+// Eliminar usuario
+document.querySelectorAll('.delete-user').forEach(button => {
+    button.addEventListener('click', async function() {
+        if (this.disabled) return;
+
+        const userId = this.dataset.userId;
+        const userName = this.dataset.userName || 'este usuario';
+
+        if (!confirm(`¿Realmente deseas ELIMINAR al usuario "${userName}"?`)) {
+            return;
+        }
+
+        if (!confirm(`¡ATENCIÓN!\nEsta acción es IRREVERSIBLE.\n\n¿Estás completamente seguro?`)) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>');
+        formData.append('delete_user', '1');
+        formData.append('user_id', userId);
+
+        try {
+            this.disabled = true;
+            this.textContent = 'Eliminando...';
+
+            const response = await fetch('', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                const row = this.closest('tr');
+                row.style.transition = 'opacity 0.6s ease';
+                row.style.opacity = '0';
+
+                setTimeout(() => {
+                    row.remove();
+                    filterUsers(); // Refrescar filtro después de eliminar
+                }, 600);
+
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success';
+                alert.innerHTML = `${result.message} <button class="alert-close">×</button>`;
+                document.querySelector('.content').prepend(alert);
+                alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+            } else {
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-error';
+                alert.innerHTML = `${result.message || 'No se pudo eliminar el usuario'} <button class="alert-close">×</button>`;
+                document.querySelector('.content').prepend(alert);
+                alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+            }
+        } catch (error) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-error';
+            alert.innerHTML = `Error de conexión al intentar eliminar: ${error.message} <button class="alert-close">×</button>`;
+            document.querySelector('.content').prepend(alert);
+            alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+        } finally {
+            this.disabled = false;
+            this.textContent = 'Eliminar';
+        }
+    });
+});
+
     </script>
 </body>
 </html>
