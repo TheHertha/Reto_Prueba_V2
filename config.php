@@ -2,7 +2,7 @@
 // Configuración de la base de datos
 $host = 'localhost';
 $username = 'root';
-$password = 'Sk2Lo9R+k3.y';//
+$password = '';//Sk2Lo9R+k3.y
 $database = 'retofitcat21';
 
 try {
