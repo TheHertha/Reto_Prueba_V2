@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config.php';  // Ajusta si tu archivo se llama config.php o config/db.php
+require_once 'config.php';
 
 $pdo->exec("SET time_zone = '-06:00'");
 
@@ -19,79 +19,94 @@ $csrf_token = $_SESSION['csrf_token'];
 
 // Procesar POST (AJAX)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $csrf_token) {
-        header('Content-Type: application/json');
         echo json_encode(['error' => true, 'message' => 'Error de seguridad.']);
         exit;
     }
 
-// ... validación de contenido ...
+    // Crear nueva publicación
+    if (isset($_POST['create_publicacion'])) {
+        $contenido = trim($_POST['contenido'] ?? '');
+        
+        if (empty($contenido)) {
+            echo json_encode(['error' => true, 'message' => 'El contenido es obligatorio.']);
+            exit;
+        }
 
-$media = null;
-$media_tipo = 'none';
+        $media = null;
+        $media_tipo = 'none';
 
-if (isset($_FILES['media']) && $_FILES['media']['error'] === UPLOAD_ERR_OK) {
-    $file = $_FILES['media'];
-    $mime = mime_content_type($file['tmp_name']);
-    $size_limit = 50 * 1024 * 1024; // 50MB para videos
+        if (isset($_FILES['media']) && $_FILES['media']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['media'];
+            $mime = mime_content_type($file['tmp_name']);
+            $size_limit = 50 * 1024 * 1024; // 50MB para videos
 
-    if ($file['size'] > $size_limit) {
-        echo json_encode(['error' => true, 'message' => 'Archivo demasiado grande (máx 50MB).']);
-        exit;
+            if ($file['size'] > $size_limit) {
+                echo json_encode(['error' => true, 'message' => 'Archivo demasiado grande (máx 50MB).']);
+                exit;
+            }
+
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $nombre_archivo = 'media_' . time() . '_' . uniqid() . '.' . $ext;
+            $ruta = 'Uploads/' . $nombre_archivo;
+
+            if (!move_uploaded_file($file['tmp_name'], $ruta)) {
+                echo json_encode(['error' => true, 'message' => 'Error al subir el archivo.']);
+                exit;
+            }
+
+            $media = $ruta;
+
+            // Detectar tipo
+            if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'])) {
+                $media_tipo = 'image';
+            } elseif (in_array($mime, ['video/mp4', 'video/webm'])) {
+                $media_tipo = 'video';
+            } else {
+                unlink($ruta); // borra si no es válido
+                echo json_encode(['error' => true, 'message' => 'Formato no soportado.']);
+                exit;
+            }
+        }
+
+        // Insertar
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO publicaciones (contenido, imagen, media_tipo, media_url, fecha, activo, creado_por)
+                VALUES (:contenido, :imagen, :media_tipo, :media_url, NOW(), 1, :creado_por)
+            ");
+            $stmt->execute([
+                'contenido'   => $contenido,
+                'imagen'      => ($media_tipo === 'image' ? $media : null),
+                'media_tipo'  => $media_tipo,
+                'media_url'   => ($media_tipo === 'video' ? $media : null),
+                'creado_por'  => $_SESSION['nombre'] . ' (admin)'
+            ]);
+            
+            echo json_encode(['success' => true, 'message' => 'Publicación creada correctamente.']);
+            exit;
+        } catch (PDOException $e) {
+            echo json_encode(['error' => true, 'message' => 'Error al guardar: ' . $e->getMessage()]);
+            exit;
+        }
     }
-
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $nombre_archivo = 'media_' . time() . '_' . uniqid() . '.' . $ext;
-    $ruta = 'Uploads/' . $nombre_archivo;
-
-    if (!move_uploaded_file($file['tmp_name'], $ruta)) {
-        echo json_encode(['error' => true, 'message' => 'Error al subir el archivo.']);
-        exit;
-    }
-
-    $media = $ruta;
-
-    // Detectar tipo
-    if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'])) {
-        $media_tipo = 'image';
-    } elseif (in_array($mime, ['video/mp4', 'video/webm'])) {
-        $media_tipo = 'video';
-    } else {
-        unlink($ruta); // borra si no es válido
-        echo json_encode(['error' => true, 'message' => 'Formato no soportado.']);
-        exit;
-    }
-}
-
-// Insertar
-$stmt = $pdo->prepare("
-    INSERT INTO publicaciones (contenido, imagen, media_tipo, media_url, fecha, activo, creado_por)
-    VALUES (:contenido, :imagen, :media_tipo, :media_url, NOW(), 1, :creado_por)
-");
-$stmt->execute([
-    'contenido'   => $contenido,
-    'imagen'      => ($media_tipo === 'image' ? $media : null),
-    'media_tipo'  => $media_tipo,
-    'media_url'   => ($media_tipo === 'video' ? $media : null),
-    'creado_por'  => $_SESSION['nombre'] . ' (admin)'
-]);
 
     // Eliminar publicación
     if (isset($_POST['delete_publicacion'])) {
         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
         if (!$id) {
-            header('Content-Type: application/json');
             echo json_encode(['error' => true, 'message' => 'ID inválido.']);
             exit;
         }
 
         // Obtener la imagen antes de borrar
-        $stmt = $pdo->prepare("SELECT imagen FROM publicaciones WHERE id = :id");
+        $stmt = $pdo->prepare("SELECT imagen, media_url FROM publicaciones WHERE id = :id");
         $stmt->execute(['id' => $id]);
         $pub = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$pub) {
-            header('Content-Type: application/json');
             echo json_encode(['error' => true, 'message' => 'Publicación no encontrada.']);
             exit;
         }
@@ -104,20 +119,23 @@ $stmt->execute([
         if ($pub['imagen'] && file_exists($pub['imagen'])) {
             @unlink($pub['imagen']);
         }
+        
+        // Borrar video físico si existe
+        if ($pub['media_url'] && file_exists($pub['media_url'])) {
+            @unlink($pub['media_url']);
+        }
 
-        header('Content-Type: application/json');
         echo json_encode(['success' => true, 'message' => 'Publicación eliminada correctamente.']);
         exit;
     }
 
     // Si se implementa edición en el futuro, aquí iría el código
     if (isset($_POST['edit_publicacion'])) {
-        header('Content-Type: application/json');
         echo json_encode(['error' => true, 'message' => 'Edición no implementada aún.']);
         exit;
     }
 
-    header('Content-Type: application/json');
+    // Acción no reconocida
     echo json_encode(['error' => true, 'message' => 'Acción inválida.']);
     exit;
 }
