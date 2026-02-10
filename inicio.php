@@ -750,7 +750,20 @@ body {
     margin: 0 auto;
 }
 
+.post-video-container {
+    width: 100%;
+    background: #000;
+    overflow: hidden;
+    border-radius: 8px 8px 0 0;
+}
 
+.post-video {
+    width: 100%;
+    height: auto;
+    max-height: 800px;
+    display: block;
+    object-fit: contain;
+}
 
     </style>
 </head>
@@ -806,7 +819,7 @@ body {
         <?php
         try {
             $stmt = $pdo->prepare("
-                SELECT id, contenido, imagen, fecha
+                SELECT id, contenido, imagen, media_tipo, media_url, fecha
                 FROM publicaciones
                 WHERE activo = 1
                 ORDER BY fecha DESC
@@ -819,19 +832,39 @@ body {
                 echo '<div class="post-placeholder">Aún no hay publicaciones. ¡Sé el primero en compartir algo!</div>';
             } else {
                 foreach ($publicaciones as $pub) {
-                    ?>
-                    <div class="post-card">
-                        <?php if (!empty($pub['imagen'])): ?>
+                    $media_html = '';
+
+                    // Imagen
+                    if (!empty($pub['imagen']) && $pub['media_tipo'] === 'image') {
+                        $media_html = '
                             <div class="post-image-container">
                                 <img 
-                                    src="<?= htmlspecialchars($pub['imagen']) ?>" 
+                                    src="' . htmlspecialchars($pub['imagen']) . '" 
                                     alt="Publicación" 
                                     class="post-image" 
                                     loading="lazy" 
                                     decoding="async"
                                 >
-                            </div>
-                        <?php endif; ?>
+                            </div>';
+                    }
+                    // Video
+                    elseif (!empty($pub['media_url']) && $pub['media_tipo'] === 'video') {
+                        $media_html = '
+                            <div class="post-video-container">
+                                <video 
+                                    src="' . htmlspecialchars($pub['media_url']) . '" 
+                                    class="post-video" 
+                                    controls 
+                                    preload="metadata" 
+                                    loading="lazy"
+                                    playsinline
+                                ></video>
+                            </div>';
+                    }
+
+                    ?>
+                    <div class="post-card">
+                        <?= $media_html ?>
                         
                         <div class="post-content">
                             <div class="post-header">
@@ -851,7 +884,7 @@ body {
     </div>
 </main>
 
-</div> 
+</div> <!-- cierre layout-container -->
 
 <div class="footer-minimal">
     <p>CAT 21</p>
@@ -859,4 +892,5 @@ body {
 
 <script src="assets/js/script.js"></script>
 </body>
+</html>
 </html>

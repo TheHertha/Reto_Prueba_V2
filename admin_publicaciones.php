@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config.php';
+require_once 'config/db.php';  // Ajusta si tu archivo se llama config.php o config/db.php
 
 $pdo->exec("SET time_zone = '-06:00'");
 
