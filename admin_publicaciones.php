@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config.php';  // Ajusta si tu archivo se llama config.php o config/db.php
+require_once 'config.php';
 
 $pdo->exec("SET time_zone = '-06:00'");
 
@@ -25,58 +25,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Crear publicación
-    if (isset($_POST['create_publicacion'])) {
-        $contenido = trim($_POST['contenido'] ?? '');
-        $imagen = null;
+// ... validación de contenido ...
 
-        if (empty($contenido)) {
-            header('Content-Type: application/json');
-            echo json_encode(['error' => true, 'message' => 'El contenido es obligatorio.']);
-            exit;
-        }
+$media = null;
+$media_tipo = 'none';
 
-        if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
-            $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-            $mime = mime_content_type($_FILES['imagen']['tmp_name']);
-            if (!in_array($mime, $allowed)) {
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'Solo JPG, PNG o WEBP.']);
-                exit;
-            }
-            if ($_FILES['imagen']['size'] > 5 * 1024 * 1024) { // 5MB máx
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'Imagen demasiado grande (máx 5MB).']);
-                exit;
-            }
+if (isset($_FILES['media']) && $_FILES['media']['error'] === UPLOAD_ERR_OK) {
+    $file = $_FILES['media'];
+    $mime = mime_content_type($file['tmp_name']);
+    $size_limit = 50 * 1024 * 1024; // 50MB para videos
 
-            $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
-            $nombre_archivo = 'pub_' . time() . '_' . uniqid() . '.' . $ext;
-            $ruta = 'Uploads/' . $nombre_archivo;
-
-            if (!move_uploaded_file($_FILES['imagen']['tmp_name'], $ruta)) {
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'Error al subir la imagen.']);
-                exit;
-            }
-            $imagen = $ruta;
-        }
-
-        // Insertamos sin usuario_id
-        $stmt = $pdo->prepare("
-            INSERT INTO publicaciones (contenido, imagen, fecha, activo, creado_por)
-            VALUES (:contenido, :imagen, NOW(), 1, :creado_por)
-        ");
-        $stmt->execute([
-            'contenido'   => $contenido,
-            'imagen'      => $imagen,
-            'creado_por'  => $_SESSION['nombre'] . ' (admin)'  // solo para auditoría interna
-        ]);
-
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'message' => 'Publicación creada correctamente.']);
+    if ($file['size'] > $size_limit) {
+        echo json_encode(['error' => true, 'message' => 'Archivo demasiado grande (máx 50MB).']);
         exit;
     }
+
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $nombre_archivo = 'media_' . time() . '_' . uniqid() . '.' . $ext;
+    $ruta = 'Uploads/' . $nombre_archivo;
+
+    if (!move_uploaded_file($file['tmp_name'], $ruta)) {
+        echo json_encode(['error' => true, 'message' => 'Error al subir el archivo.']);
+        exit;
+    }
+
+    $media = $ruta;
+
+    // Detectar tipo
+    if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'])) {
+        $media_tipo = 'image';
+    } elseif (in_array($mime, ['video/mp4', 'video/webm'])) {
+        $media_tipo = 'video';
+    } else {
+        unlink($ruta); // borra si no es válido
+        echo json_encode(['error' => true, 'message' => 'Formato no soportado.']);
+        exit;
+    }
+}
+
+// Insertar
+$stmt = $pdo->prepare("
+    INSERT INTO publicaciones (contenido, imagen, media_tipo, media_url, fecha, activo, creado_por)
+    VALUES (:contenido, :imagen, :media_tipo, :media_url, NOW(), 1, :creado_por)
+");
+$stmt->execute([
+    'contenido'   => $contenido,
+    'imagen'      => ($media_tipo === 'image' ? $media : null),
+    'media_tipo'  => $media_tipo,
+    'media_url'   => ($media_tipo === 'video' ? $media : null),
+    'creado_por'  => $_SESSION['nombre'] . ' (admin)'
+]);
 
     // Eliminar publicación
     if (isset($_POST['delete_publicacion'])) {
@@ -211,28 +209,31 @@ $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <?php unset($_SESSION['success']); ?>
                 <?php endif; ?>
 
-                <!-- Crear Publicación -->
-                <div class="form-card">
-                    <h2>Crear Nueva Publicación</h2>
-                    <form id="create-pub-form" method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                        <input type="hidden" name="create_publicacion" value="1">
-                        <div class="form-group">
-                            <label for="contenido">Contenido</label>
-                            <textarea id="contenido" name="contenido" required placeholder="Escribe el texto de la publicación..."></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="imagen">Imagen (opcional)</label>
-                            <input type="file" id="imagen" name="imagen" accept="image/jpeg,image/png,image/webp">
-                            <small>Máx 5MB - JPG, PNG, WEBP</small>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-submit">Publicar</button>
-                        </div>
-                    </form>
-                </div>
+          
+               <div class="form-card">
+    <h2>Crear Nueva Publicación</h2>
+    <form id="create-pub-form" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+        <input type="hidden" name="create_publicacion" value="1">
+        
+        <div class="form-group">
+            <label for="contenido">Contenido</label>
+            <textarea id="contenido" name="contenido" required placeholder="Escribe el texto de la publicación..."></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="media">Imagen o Video (opcional)</label>
+            <input type="file" id="media" name="media" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm">
+            <small>Máx 50MB para videos - JPG/PNG/WEBP o MP4/WEBM</small>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-submit">Publicar</button>
+        </div>
+    </form>
+</div>
 
-                <!-- Lista de Publicaciones -->
+           
                 <div class="publicaciones-section">
                     <h2>Publicaciones Existentes</h2>
                     <table class="data-table">
@@ -280,12 +281,11 @@ $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <script>
-        // Cerrar alertas
         document.querySelectorAll('.alert-close').forEach(btn => {
             btn.addEventListener('click', () => btn.parentElement.remove());
         });
 
-        // Crear publicación con AJAX
+      
         document.getElementById('create-pub-form').addEventListener('submit', async e => {
             e.preventDefault();
             const formData = new FormData(e.target);
@@ -310,7 +310,7 @@ $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
         });
 
-        // Eliminar publicación
+
         document.querySelectorAll('.delete-pub').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.dataset.id;
