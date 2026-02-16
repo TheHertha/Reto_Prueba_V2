@@ -13,6 +13,7 @@ $nombre = htmlspecialchars($_SESSION['nombre']);
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inicio - CAT 21</title>
@@ -766,6 +767,69 @@ body {
 }
 
     </style>
+<!-- Marked.js (solo una vez, versión reciente) -->
+<script src="https://cdn.jsdelivr.net/npm/marked@14.0.0/lib/marked.umd.min.js"></script>
+
+<style>
+  /* ESTILOS DEL CHATBOT - versión naranja que querías originalmente */
+  .chatbot-toggle {
+    position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
+    background: linear-gradient(135deg, #ed563b, #ed563b); color: white;
+    border: none; border-radius: 50%; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 184, 148, 0.4); z-index: 2000; /* subimos z-index por si acaso */
+    display: flex; align-items: center; justify-content: center; transition: all 0.3s;
+  }
+  .chatbot-toggle:hover { transform: scale(1.1); }
+
+  .chatbot-container {
+    position: fixed; bottom: 110px; right: 30px; width: 380px; height: 520px;
+    background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    overflow: hidden; display: none; flex-direction: column; z-index: 1999;
+  }
+  .chatbot-container.open { display: flex; }
+
+  .chatbot-header {
+    background: linear-gradient(135deg, #ed563b, #ed563b); color: white;
+    padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .chatbot-header h3 { margin: 0; font-size: 18px; }
+
+  .chatbot-close { background: none; border: none; color: white; font-size: 28px; cursor: pointer; }
+
+  .chatbot-messages {
+    flex: 1; padding: 20px; overflow-y: auto; background: #f8f9fa;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .chatbot-message {
+    max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4;
+  }
+  .chatbot-message.bot { align-self: flex-start; background: #e9ecef; border-bottom-left-radius: 4px; }
+  .chatbot-message.user { align-self: flex-end; background: #ed563b; color: white; border-bottom-right-radius: 4px; }
+
+  .chatbot-input {
+    padding: 15px; background: white; border-top: 1px solid #eee; display: flex;
+  }
+  .chatbot-input input {
+    flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 30px; font-size: 15px;
+  }
+  .chatbot-input button {
+    margin-left: 10px; background: #ed563b; color: white; border: none;
+    border-radius: 50%; width: 44px; height: 44px; cursor: pointer;
+  }
+
+  .chatbot-footer {
+    padding: 8px 15px; background: #f8f9fa; border-top: 1px solid #eee;
+    font-size: 12px; color: #666; text-align: center;
+  }
+
+  @media (max-width: 500px) {
+    .chatbot-container { width: 90vw; right: 5vw; height: 70vh; bottom: 90px; }
+  }
+
+  /* Asegura que no choque con el body background */
+  body { background: #ffffff !important; } /* fuerza tu fondo blanco original */
+</style>
 </head>
 <body>
 <header class="header">
@@ -800,12 +864,12 @@ body {
             <span class="text">Productos</span>
         </a>
         
-        <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin'): ?>
-            <a href="admin_reto.php" class="sidebar-link admin-link" title="Administrador">
-                <i class="fas fa-gear"></i>
-                <span class="text">Administrador</span>
-            </a>
-        <?php endif; ?>
+       <?php if (isset($_SESSION['rol']) && in_array($_SESSION['rol'], ['admin', 'facilitador_admin'])): ?>
+    <a href="admin_reto.php" class="sidebar-link admin-link" title="Administrar">
+        <i class="fas fa-gear"></i>
+        <span class="text">Administrar</span>
+    </a>
+<?php endif; ?>
     </nav>
 </aside>
 
@@ -891,6 +955,152 @@ body {
 </div>
 
 <script src="assets/js/script.js"></script>
+<!-- Botón flotante chatbot -->
+<button class="chatbot-toggle" id="chatbotToggle">
+  <svg width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+</button>
+
+<!-- Contenedor chat -->
+<div class="chatbot-container" id="chatbotContainer">
+  <div class="chatbot-header">
+    <h3>🩺 Dr. NutriBot</h3>
+    <button class="chatbot-close" id="chatbotClose">×</button>
+  </div>
+
+  <div class="chatbot-messages" id="chatbotMessages"></div> <!-- vacío al inicio -->
+
+  <div class="chatbot-input">
+    <input type="text" id="chatbotInput" placeholder="Escribe tu duda...">
+    <button id="chatbotSend">→</button>
+  </div>
+
+  <div class="chatbot-footer">
+    <small>⚠️ Dr. NutriBot es IA. No sustituye a un profesional de salud.<br>Consulta a un nutricionista certificado.</small>
+  </div>
+</div>
+
+<script>
+  const API_KEY = "AIzaSyCttKjtKBeuMP3Z1ReOH0mYt2fWVLeGc_Q"; // ← verifica que sea válida
+  const MODEL = "gemini-2.5-flash";
+
+  const toggle = document.getElementById('chatbotToggle');
+  const container = document.getElementById('chatbotContainer');
+  const closeBtn = document.getElementById('chatbotClose');
+  const messagesDiv = document.getElementById('chatbotMessages');
+  const input = document.getElementById('chatbotInput');
+  const sendBtn = document.getElementById('chatbotSend');
+
+  let history = [];
+
+  console.log("Chatbot script cargado. Elementos:", { toggle: !!toggle, container: !!container });
+
+  if (!toggle || !container) {
+    console.error("Error: No se encontraron elementos del chatbot. Revisa IDs en HTML.");
+  }
+
+  // Mensaje inicial SIEMPRE (incluso si no abre, se prepara)
+  const initialText = "¡Hola! Soy el Dr. NutriBot.\n¿Qué duda tienes sobre nutrición hoy?";
+  addMessage(initialText, 'bot');
+  history.push({ role: "model", parts: [{ text: initialText }] });
+
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      console.log("Click en toggle");
+      container.classList.toggle('open');
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      console.log("Click en cerrar");
+      container.classList.remove('open');
+    });
+  }
+
+  async function sendMessage() {
+    const text = input?.value?.trim();
+    if (!text) return;
+
+    addMessage(text, 'user');
+    history.push({ role: "user", parts: [{ text }] });
+    input.value = '';
+
+    const typing = document.createElement('div');
+    typing.className = 'chatbot-message bot typing';
+    typing.textContent = 'Dr. NutriBot está pensando...';
+    messagesDiv.appendChild(typing);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    try {
+      console.log("Enviando a Gemini...");
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: history,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+            systemInstruction: {
+              parts: [{
+                text: `Eres Dr. NutriBot, asistente de nutrición amigable y profesional.
+Responde SIEMPRE en español, claro, corto y positivo.
+Usa Markdown cuando sea útil.
+Solo dudas generales. Nunca dietas personalizadas ni consejos médicos.`
+              }]
+            }
+          })
+        }
+      );
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`API error ${res.status}: ${errText}`);
+      }
+
+      const data = await res.json();
+      const botText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No respuesta";
+
+      typing.remove();
+      addMessage(botText, 'bot');
+      history.push({ role: "model", parts: [{ text: botText }] });
+
+    } catch (err) {
+      console.error("Error en Gemini:", err);
+      typing.remove();
+      addMessage("¡Ups! Algo falló (revisa consola). Intenta más tarde.", 'bot');
+    }
+  }
+
+  function addMessage(text, sender) {
+    if (!messagesDiv) return;
+    const msg = document.createElement('div');
+    msg.className = `chatbot-message ${sender}`;
+    if (sender === 'bot') {
+      try {
+        msg.innerHTML = marked.parse(text);
+      } catch (e) {
+        console.error("Error marked:", e);
+        msg.textContent = text; // fallback
+      }
+    } else {
+      msg.textContent = text;
+    }
+    messagesDiv.appendChild(msg);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+  if (input) {
+    input.addEventListener('keypress', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+</script>
 </body>
 </html>
-</html>
+</html> 

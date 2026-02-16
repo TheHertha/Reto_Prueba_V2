@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Fetch user data
+
 try {
     $stmt = $pdo->prepare("SELECT rol, habilitado, fecha_nacimiento FROM usuarios WHERE id = :user_id");
     $stmt->execute(['user_id' => $_SESSION['user_id']]);
@@ -24,7 +24,7 @@ try {
     $_SESSION['rol'] = $user['rol'];
     $is_admin = $user['rol'] === 'admin';
     error_log("reto.php: User fetched, user_id=" . $_SESSION['user_id'] . ", rol=" . $user['rol'] . ", habilitado=" . $user['habilitado']);
-    // Allow admins to access regardless of habilitado status
+   
     if (!$is_admin && !$user['habilitado']) {
         $_SESSION['error'] = "Tu cuenta no está habilitada. Contacta al administrador.";
         error_log("reto.php: Redirecting to inicio.php, not admin and not habilitado, user_id=" . $_SESSION['user_id']);
@@ -38,13 +38,13 @@ try {
     exit;
 }
 
-// Calculate age and range
+
 $birth_date = new DateTime($user['fecha_nacimiento']);
 $current_date = new DateTime();
 $age = $current_date->diff($birth_date)->y;
 $rango_edad = ($age >= 20 && $age <= 39) ? '20-39' : (($age >= 40 && $age <= 59) ? '40-59' : '+60');
 
-// Check for active reto
+
 try {
     $stmt = $pdo->query("SELECT id, start_date, end_date FROM retos WHERE CURDATE() BETWEEN start_date AND end_date LIMIT 1");
     $reto = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -56,8 +56,25 @@ try {
     }
     $reto_id = $reto['id'];
 
-    // Fetch user data for the current reto
-    $stmt = $pdo->prepare("SELECT semana, estatura, peso, masa, grasa, musculo, image FROM datos_semanales WHERE usuario_id = :usuario_id AND reto_id = :reto_id");
+
+   $stmt = $pdo->prepare("
+    SELECT 
+        semana, 
+        estatura, 
+        peso, 
+        masa, 
+        grasa, 
+        musculo, 
+        image,
+        avance_grasa,
+        avance_musculo,
+        avance_grasa_visceral,
+        promedio_avance,
+        created_at  -- opcional, pero útil para depuración
+    FROM datos_semanales 
+    WHERE usuario_id = :usuario_id 
+      AND reto_id = :reto_id
+");
     $stmt->execute(['usuario_id' => $_SESSION['user_id'], 'reto_id' => $reto_id]);
     $user_data = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -71,58 +88,105 @@ try {
 }
 
 // Calculate progress (only if Semana 0 and Semana 3 data exist)
-$progress = ['rango_edad' => $rango_edad]; // Always include rango_edad
+$progress = ['rango_edad' => $rango_edad];
+
 if (isset($user_data[0]) && isset($user_data[3])) {
-    $estatura = $user_data[0]['estatura'];
-    $peso_inicial = $user_data[0]['peso'];
-    $grasa_inicial = $user_data[0]['grasa'];
-    $musculo_inicial = $user_data[0]['musculo'];
-    $masa_inicial = $user_data[0]['masa'];
-    $peso_semana3 = $user_data[3]['peso'];
-    $grasa_semana3 = $user_data[3]['grasa'];
-    $musculo_semana3 = $user_data[3]['musculo'];
-    $masa_semana3 = $user_data[3]['masa'];
+    $datos0 = $user_data[0];
+    $datos3 = $user_data[3];
 
-    // Peso ideal
-    $peso_ideal = $estatura - 100;
+    // Caso 1: Ya existe avance guardado → usar directamente (más rápido y consistente)
+    if ($datos3['promedio_avance'] !== null) {
+        $progress = [
+            'rango_edad'                    => $rango_edad,
+            'peso_ideal'                    => $datos0['estatura'] - 100,
+            'avance_grasa_semana3'          => $datos3['avance_grasa'],
+            'avance_musculo_semana3'        => $datos3['avance_musculo'],
+            'avance_grasa_visceral_semana3' => $datos3['avance_grasa_visceral'],
+            'promedio_avance_semana3'       => $datos3['promedio_avance']
+        ];
+        error_log("reto.php: Leyendo avances GUARDADOS para usuario {$_SESSION['user_id']} - reto $reto_id");
+    } 
+    // Caso 2: No existe avance → calcular y guardar
+    else {
+        error_log("reto.php: Calculando avances (primera vez) para usuario {$_SESSION['user_id']} - reto $reto_id");
 
-    // Grasa ideal por rango de edad
-    $grasa_ideal = ($rango_edad === '20-39') ? 23 : ($rango_edad === '40-59' ? 25 : 27);
-    $grasa_ideal_kg = ($grasa_ideal * $peso_ideal) / 100;
+        $estatura = $datos0['estatura'];
+        $peso_inicial = $datos0['peso'];
+        $grasa_inicial = $datos0['grasa'];
+        $musculo_inicial = $datos0['musculo'];
+        $masa_inicial = $datos0['masa'];
+        $peso_semana3 = $datos3['peso'];
+        $grasa_semana3 = $datos3['grasa'];
+        $musculo_semana3 = $datos3['musculo'];
+        $masa_semana3 = $datos3['masa'];
 
-    // Grasa calculations
-    $grasa_porcentaje_kg_inicial = ($peso_inicial * $grasa_inicial) / 100;
-    $grasa_porcentaje_kg_semana3 = ($peso_semana3 * $grasa_semana3) / 100;
-    $diferencia_grasa_semana3 = $grasa_porcentaje_kg_inicial - $grasa_porcentaje_kg_semana3;
-    $avance_grasa_semana3 = ($diferencia_grasa_semana3 / $grasa_ideal_kg) / 100;
+        $peso_ideal = $estatura - 100;
 
-    // Músculo ideal por rango de edad
-    $musculo_ideal = ($rango_edad === '20-39') ? 41.7 : ($rango_edad === '40-59' ? 41.5 : 41.3);
-    $musculo_ideal_kg = ($musculo_ideal * $peso_ideal) / 100;
+        $grasa_ideal = ($rango_edad === '20-39') ? 23 : ($rango_edad === '40-59' ? 25 : 27);
+        $grasa_ideal_kg = ($grasa_ideal * $peso_ideal) / 100;
 
-    // Músculo calculations
-    $musculo_porcentaje_kg_inicial = ($peso_inicial * $musculo_inicial) / 100;
-    $musculo_porcentaje_kg_semana3 = ($peso_semana3 * $musculo_semana3) / 100;
-    $diferencia_musculo_semana3 = $musculo_porcentaje_kg_semana3 - $musculo_porcentaje_kg_inicial;
-    $avance_musculo_semana3 = ($diferencia_musculo_semana3 / $musculo_ideal_kg) * 100;
+        $grasa_porcentaje_kg_inicial = ($peso_inicial * $grasa_inicial) / 100;
+        $grasa_porcentaje_kg_semana3 = ($peso_semana3 * $grasa_semana3) / 100;
+        $diferencia_grasa_semana3 = $grasa_porcentaje_kg_inicial - $grasa_porcentaje_kg_semana3;
+        $avance_grasa_semana3 = ($grasa_ideal_kg > 0) ? ($diferencia_grasa_semana3 / $grasa_ideal_kg) * 100 : 0; // CORREGIDO ×100
 
-    // Grasa visceral
-    $grasa_visceral_ideal = 7;
-    $grasa_visceral_diferencia_ideal = $masa_inicial - $grasa_visceral_ideal;
-    $diferencia_grasa_visceral_semana3 = $masa_inicial - $masa_semana3;
-    $avance_grasa_visceral_semana3 = $grasa_visceral_diferencia_ideal != 0 ? ($diferencia_grasa_visceral_semana3 / $grasa_visceral_diferencia_ideal) * 100 : 0;
+        $musculo_ideal = ($rango_edad === '20-39') ? 41.7 : ($rango_edad === '40-59' ? 41.5 : 41.3);
+        $musculo_ideal_kg = ($musculo_ideal * $peso_ideal) / 100;
 
-    // Promedio avance
-    $promedio_avance_semana3 = ($avance_grasa_visceral_semana3 + $avance_grasa_semana3 + $avance_musculo_semana3) / 3;
+        $musculo_porcentaje_kg_inicial = ($peso_inicial * $musculo_inicial) / 100;
+        $musculo_porcentaje_kg_semana3 = ($peso_semana3 * $musculo_semana3) / 100;
+        $diferencia_musculo_semana3 = $musculo_porcentaje_kg_semana3 - $musculo_porcentaje_kg_inicial;
+        $avance_musculo_semana3 = ($musculo_ideal_kg > 0) ? ($diferencia_musculo_semana3 / $musculo_ideal_kg) * 100 : 0;
 
-    $progress = [
-        'rango_edad' => $rango_edad,
-        'peso_ideal' => $peso_ideal,
-        'avance_grasa_semana3' => $avance_grasa_semana3,
-        'avance_musculo_semana3' => $avance_musculo_semana3,
-        'avance_grasa_visceral_semana3' => $avance_grasa_visceral_semana3,
-        'promedio_avance_semana3' => $promedio_avance_semana3
-    ];
+        $grasa_visceral_ideal = 7;
+        $grasa_visceral_diferencia_ideal = $masa_inicial - $grasa_visceral_ideal;
+        $diferencia_grasa_visceral_semana3 = $masa_inicial - $masa_semana3;
+        $avance_grasa_visceral_semana3 = ($grasa_visceral_diferencia_ideal != 0) ? ($diferencia_grasa_visceral_semana3 / $grasa_visceral_diferencia_ideal) * 100 : 0;
+
+        $promedio_avance_semana3 = ($avance_grasa_visceral_semana3 + $avance_grasa_semana3 + $avance_musculo_semana3) / 3;
+
+        $progress = [
+            'rango_edad'                    => $rango_edad,
+            'peso_ideal'                    => $peso_ideal,
+            'avance_grasa_semana3'          => $avance_grasa_semana3,
+            'avance_musculo_semana3'        => $avance_musculo_semana3,
+            'avance_grasa_visceral_semana3' => $avance_grasa_visceral_semana3,
+            'promedio_avance_semana3'       => $promedio_avance_semana3
+        ];
+
+        // Guardar en BD
+        try {
+            $stmt_update = $pdo->prepare("
+                UPDATE datos_semanales
+                   SET avance_grasa          = :ag,
+                       avance_musculo        = :am,
+                       avance_grasa_visceral = :av,
+                       promedio_avance       = :prom
+                 WHERE usuario_id = :uid
+                   AND reto_id    = :rid
+                   AND semana     = 3
+            ");
+            $stmt_update->execute([
+                ':ag'   => round($avance_grasa_semana3, 3),
+                ':am'   => round($avance_musculo_semana3, 3),
+                ':av'   => round($avance_grasa_visceral_semana3, 3),
+                ':prom' => round($promedio_avance_semana3, 3),
+                ':uid'  => $_SESSION['user_id'],
+                ':rid'  => $reto_id
+            ]);
+
+            $filas = $stmt_update->rowCount();
+            error_log("reto.php: UPDATE ejecutado - filas afectadas: $filas para uid={$_SESSION['user_id']}, rid=$reto_id");
+
+            // Actualizar variable local (para esta carga)
+            $user_data[3]['avance_grasa']          = round($avance_grasa_semana3, 3);
+            $user_data[3]['avance_musculo']        = round($avance_musculo_semana3, 3);
+            $user_data[3]['avance_grasa_visceral'] = round($avance_grasa_visceral_semana3, 3);
+            $user_data[3]['promedio_avance']       = round($promedio_avance_semana3, 3);
+        } catch (PDOException $e) {
+            error_log("reto.php ERROR: Falló UPDATE avances: " . $e->getMessage());
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -132,7 +196,7 @@ if (isset($user_data[0]) && isset($user_data[3])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CAT21 - RETO 2025</title>
     <style>
-/* Reinicia márgenes, paddings y configura box-sizing para consistencia */
+
 * {
     margin: 0;
     padding: 0;
@@ -838,7 +902,7 @@ body {
     </footer>
 
     <script>
-        // Validaciones de inputs
+     
         document.querySelectorAll('input[name="estatura"]').forEach(input => {
             input.addEventListener('change', () => {
                 const value = parseFloat(input.value);
@@ -885,7 +949,7 @@ body {
             });
         });
 
-        // Manejo de formularios placebo (Semana 1 y 2)
+      
         document.querySelectorAll('form[action="#"]').forEach(form => {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
