@@ -863,6 +863,10 @@ body {
             <i class="fas fa-cart-shopping"></i>
             <span class="text">Productos</span>
         </a>
+        <a href="biblioteca.html" class="sidebar-link" title="Biblioteca">
+            <i class="fas fa-book"></i>
+            <span class="text">Biblioteca</span>
+        </a>
         
        <?php if (isset($_SESSION['rol']) && in_array($_SESSION['rol'], ['admin', 'facilitador_admin'])): ?>
     <a href="admin_reto.php" class="sidebar-link admin-link" title="Administrar">
