@@ -2,7 +2,7 @@
 
 $host = 'localhost';
 $username = 'root';
-$password = '';
+$password = 'Sk2Lo9R+k3.y';//
 $database = 'retofitcat21';
 
 try {
