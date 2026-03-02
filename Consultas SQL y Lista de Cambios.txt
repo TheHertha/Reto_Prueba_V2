@@ -1,0 +1,78 @@
+Consultas SQL
+
+Para emojis:
+
+ALTER DATABASE retofitcat21 
+    CHARACTER SET utf8mb4 
+    COLLATE utf8mb4_unicode_ci;
+
+Para nombre de reto:
+
+ALTER TABLE retos
+ADD COLUMN nombre VARCHAR(300) NOT NULL DEFAULT '' AFTER id;
+
+
+Para lo de coaches:
+
+ALTER TABLE usuarios
+ADD COLUMN coach_id INT NULL DEFAULT NULL,
+ADD INDEX idx_coach_id (coach_id);
+
+
+
+
+
+UPDATE usuarios u
+INNER JOIN coaches c ON TRIM(u.seleccion_couch) = TRIM(c.name)
+SET u.coach_id = c.user_id
+WHERE u.seleccion_couch IS NOT NULL 
+  AND u.seleccion_couch <> ''
+  AND u.coach_id IS NULL;
+
+IMPORTANTE, USAR ESTA AL FINAL PARA UNIR LOS COACHES CON LOS ID NUEVOS}
+
+
+
+
+
+
+
+
+
+
+Lista de cambios:
+
+
+Bloqueo de semanas - Reto
+
+
+
+Emojis - Config, publicaciones
+
+
+
+Perfil - admin_reto, perfil
+
+
+
+Boton - Login
+
+
+
+Facilitador obligatorio, agregar coach_id - register, register process
+
+
+
+Cambiar texto - index
+
+
+
+Nombre de retos - admin reto, reto
+
+
+
+Datos nuevos - Admin reto
+
+
+
+

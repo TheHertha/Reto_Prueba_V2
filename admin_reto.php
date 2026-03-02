@@ -4,15 +4,21 @@ require_once 'config.php';
 
 $pdo->exec("SET time_zone = '-06:00'");
 
-// Check if user is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'admin') {
-    $_SESSION['error'] = "Acceso denegado. Solo administradores pueden acceder a esta página.";
-    error_log("admin_reto.php: Access denied, user_id=" . ($_SESSION['user_id'] ?? 'none') . ", rol=" . ($_SESSION['rol'] ?? 'none'));
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['rol'], ['admin', 'facilitador_admin'])) {
+    $_SESSION['error'] = "Acceso denegado. Solo administradores o facilitadores autorizados pueden acceder.";
+    error_log("admin_reto.php: Access denied - user_id=" . ($_SESSION['user_id'] ?? 'none') . ", rol=" . ($_SESSION['rol'] ?? 'none'));
     header("Location: login.php");
     exit;
 }
 
-// Generate or reuse CSRF token
+
+$isSuperAdmin = ($_SESSION['rol'] === 'admin');
+$isFacilitador = ($_SESSION['rol'] === 'facilitador_admin');
+$canToggleUsers = $isSuperAdmin || $isFacilitador;
+$canChangeRole  = $isSuperAdmin || $isFacilitador;
+$canDeleteUsers = $isSuperAdmin;
+
+
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -20,7 +26,6 @@ $csrf_token = $_SESSION['csrf_token'];
 error_log("admin_reto.php: CSRF token=$csrf_token");
 
 try {
-    // Check for retos starting exactly today, but only disable if no active reto exists
     $pdo->beginTransaction();
     $stmt = $pdo->prepare("SELECT id FROM retos WHERE start_date <= CURDATE() AND end_date >= CURDATE()");
     $stmt->execute();
@@ -45,7 +50,6 @@ try {
     }
     $pdo->commit();
 
-    // Handle AJAX requests
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $csrf_token) {
             ob_clean();
@@ -56,68 +60,134 @@ try {
         }
 
         // Handle reto creation
-        if (isset($_POST['create_reto'])) {
-            $start_date = $_POST['start_date'] ?? '';
-            $end_date = $_POST['end_date'] ?? '';
+if (isset($_POST['create_reto'])) {
+    $nombre      = trim($_POST['nombre'] ?? '');
+    $start_date  = $_POST['start_date']  ?? '';
+    $end_date    = $_POST['end_date']    ?? '';
 
-            if (!$start_date || !$end_date || strtotime($end_date) <= strtotime($start_date)) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'Fechas inválidas: la fecha de fin debe ser posterior a la de inicio.']);
-                error_log("admin_reto.php: Validation failed, invalid dates: start=$start_date, end=$end_date");
-                exit;
+    // ────────────────────────────────────────────────
+    // Validaciones básicas
+    // ────────────────────────────────────────────────
+    if (empty($nombre)) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'El nombre del reto es obligatorio.']);
+        error_log("admin_reto.php: Falta nombre al crear reto");
+        exit;
+    }
+
+    if (mb_strlen($nombre) > 300) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'El nombre del reto es demasiado largo (máximo 300 caracteres).']);
+        error_log("admin_reto.php: Nombre demasiado largo: " . mb_strlen($nombre) . " caracteres");
+        exit;
+    }
+
+    if (!$start_date || !$end_date) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'Las fechas de inicio y fin son obligatorias.']);
+        error_log("admin_reto.php: Fechas faltantes al crear reto");
+        exit;
+    }
+
+    if (strtotime($end_date) <= strtotime($start_date)) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'La fecha de fin debe ser posterior a la fecha de inicio.']);
+        error_log("admin_reto.php: Fechas inválidas: start=$start_date, end=$end_date");
+        exit;
+    }
+
+    // Verificar superposición de fechas
+    $stmt = $pdo->prepare("
+        SELECT id FROM retos 
+        WHERE (start_date <= :end_date AND end_date >= :start_date)
+    ");
+    $stmt->execute(['start_date' => $start_date, 'end_date' => $end_date]);
+    if ($stmt->fetch()) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'Ya existe un reto con fechas superpuestas.']);
+        error_log("admin_reto.php: Overlapping reto detected");
+        exit;
+    }
+
+    // ────────────────────────────────────────────────
+    // Inserción
+    // ────────────────────────────────────────────────
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("
+            INSERT INTO retos (nombre, start_date, end_date) 
+            VALUES (:nombre, :start_date, :end_date)
+        ");
+        $stmt->execute([
+            ':nombre'      => $nombre,
+            ':start_date'  => $start_date,
+            ':end_date'    => $end_date
+        ]);
+
+        $new_reto_id = $pdo->lastInsertId();
+
+        // Lógica de deshabilitación automática si el reto inicia hoy o ya inició
+        $disabled_count = 0;
+        if (strtotime($start_date) <= time()) {
+            $stmt = $pdo->prepare("
+                SELECT id FROM retos 
+                WHERE start_date <= CURDATE() 
+                  AND end_date >= CURDATE() 
+                  AND id != :new_reto_id
+            ");
+            $stmt->execute(['new_reto_id' => $new_reto_id]);
+            $active_reto = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$active_reto && date('Y-m-d', strtotime($start_date)) === date('Y-m-d')) {
+                $stmt = $pdo->prepare("UPDATE usuarios SET habilitado = 0 WHERE rol != 'admin'");
+                $stmt->execute();
+                $disabled_count = $stmt->rowCount();
+
+                $stmt = $pdo->prepare("INSERT INTO disable_log (reto_id, disabled_at) VALUES (:reto_id, NOW())");
+                $stmt->execute(['reto_id' => $new_reto_id]);
+
+                error_log("admin_reto.php: Disabled $disabled_count non-admin users for new reto id=$new_reto_id starting on $start_date");
             }
-
-            $stmt = $pdo->prepare("SELECT id FROM retos WHERE (start_date <= :end_date AND end_date >= :start_date)");
-            $stmt->execute(['start_date' => $start_date, 'end_date' => $end_date]);
-            if ($stmt->fetch()) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'Ya existe un reto con fechas superpuestas.']);
-                error_log("admin_reto.php: Overlapping reto detected");
-                exit;
-            }
-
-            $pdo->beginTransaction();
-            
-            // Calcular el siguiente numero_reto (ciclo 1-21) basado en el proximo ID
-            $stmt = $pdo->prepare("SELECT MAX(id) as max_id FROM retos");
-            $stmt->execute();
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            $next_id = (int)($result['max_id'] ?? 0) + 1;
-            if ($next_id <= 21) {
-                $next_numero = $next_id;
-            } else {
-                $next_numero = (($next_id - 22) % 21) + 1;
-            }
-            
-            $stmt = $pdo->prepare("INSERT INTO retos (numero_reto, start_date, end_date) VALUES (:numero_reto, :start_date, :end_date)");
-            $stmt->execute(['numero_reto' => $next_numero, 'start_date' => $start_date, 'end_date' => $end_date]);
-            $new_reto_id = $pdo->lastInsertId();
-
-            if (strtotime($start_date) <= time()) {
-                $stmt = $pdo->prepare("SELECT id FROM retos WHERE start_date <= CURDATE() AND end_date >= CURDATE() AND id != :new_reto_id");
-                $stmt->execute(['new_reto_id' => $new_reto_id]);
-                $active_reto = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if (!$active_reto && date('Y-m-d', strtotime($start_date)) === date('Y-m-d')) {
-                    $stmt = $pdo->prepare("UPDATE usuarios SET habilitado = 0 WHERE rol != 'admin'");
-                    $stmt->execute();
-                    $disabled_count = $stmt->rowCount();
-                    $stmt = $pdo->prepare("INSERT INTO disable_log (reto_id, disabled_at) VALUES (:reto_id, NOW())");
-                    $stmt->execute(['reto_id' => $new_reto_id]);
-                    error_log("admin_reto.php: Disabled $disabled_count non-admin users for new reto id=$new_reto_id starting on $start_date");
-                }
-            }
-
-            $pdo->commit();
-            $_SESSION['success'] = "Reto $new_reto_id creado correctamente." . (isset($disabled_count) ? " Usuarios no administradores ($disabled_count) deshabilitados." : "");
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => $_SESSION['success'], 'new_reto_id' => $new_reto_id]);
-            error_log("admin_reto.php: Reto created, id=$new_reto_id, start_date=$start_date, end=$end_date");
-            exit;
         }
+
+        $pdo->commit();
+
+        // Mensaje de éxito mejorado
+        $success_msg = "Reto creado correctamente: <strong>" . htmlspecialchars($nombre) . "</strong> (ID: $new_reto_id)";
+        if ($disabled_count > 0) {
+            $success_msg .= " – $disabled_count usuarios no administradores deshabilitados.";
+        }
+
+        $_SESSION['success'] = $success_msg;
+
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success'     => true,
+            'message'     => $success_msg,
+            'new_reto_id' => $new_reto_id
+        ]);
+
+        error_log("admin_reto.php: Reto creado - id=$new_reto_id, nombre='$nombre', start=$start_date, end=$end_date");
+        exit;
+
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'Error al crear el reto: ' . $e->getMessage()]);
+        error_log("admin_reto.php: Error al crear reto - " . $e->getMessage());
+        exit;
+    }
+}
 
         // Handle manual ranking update
         if (isset($_POST['update_ranking'])) {
@@ -198,210 +268,424 @@ try {
         }
 
         // Handle user deletion (eliminación física)
-        if (isset($_POST['delete_user'])) {
-            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+if (isset($_POST['delete_user'])) {
 
-            if (!$user_id) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'ID de usuario inválido']);
-                error_log("admin_reto.php: Intento de eliminación con user_id inválido");
-                exit;
-            }
+    // 1. Verificar sesión y rol del usuario que ejecuta la acción
+    if (!isset($_SESSION['user_id']) || !isset($_SESSION['rol'])) {
+        http_response_code(403);
+        echo json_encode(['error' => true, 'message' => 'Sesión no válida']);
+        exit;
+    }
 
-            if ($user_id === (int)$_SESSION['user_id']) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'No puedes eliminar tu propia cuenta']);
-                error_log("admin_reto.php: Intento de auto-eliminación - user_id=$user_id");
-                exit;
-            }
+    $current_user_id = (int) $_SESSION['user_id'];
+    $current_rol     = $_SESSION['rol'];
 
-            $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE id = :user_id");
-            $stmt->execute(['user_id' => $user_id]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Solo super admin puede eliminar usuarios
+    if ($current_rol !== 'admin') {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No tienes permiso para eliminar usuarios.']);
+        error_log("admin_reto.php: Intento de eliminación sin permiso - by_user=$current_user_id ($current_rol)");
+        exit;
+    }
 
-            if (!$user) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'Usuario no encontrado']);
-                error_log("admin_reto.php: Usuario no encontrado al intentar eliminar - id=$user_id");
-                exit;
-            }
+    // 2. Validar ID de usuario objetivo
+    $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+    if (!$user_id || $user_id <= 0) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'ID de usuario inválido']);
+        error_log("admin_reto.php: Intento de eliminación con user_id inválido - by=$current_user_id");
+        exit;
+    }
 
-            if ($user['rol'] === 'admin') {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'No está permitido eliminar cuentas de administrador']);
-                error_log("admin_reto.php: Intento de eliminar administrador - id=$user_id");
-                exit;
-            }
+    // 3. Prohibir auto-eliminación
+    if ($user_id === $current_user_id) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No puedes eliminar tu propia cuenta']);
+        error_log("admin_reto.php: Intento de auto-eliminación - user_id=$user_id by=$current_user_id");
+        exit;
+    }
 
-            try {
-                $pdo->beginTransaction();
+    // 4. Obtener información del usuario objetivo
+    $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE id = :user_id");
+    $stmt->execute(['user_id' => $user_id]);
+    $target_user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                // Eliminar primero cualquier registro relacionado en rankings
-                $stmt = $pdo->prepare("DELETE FROM rankings WHERE usuario_id = :user_id");
-                $stmt->execute(['user_id' => $user_id]);
+    if (!$target_user) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'Usuario no encontrado']);
+        error_log("admin_reto.php: Usuario no encontrado al intentar eliminar - id=$user_id, by=$current_user_id");
+        exit;
+    }
 
-                // Si existen otras tablas relacionadas, agrega aquí las eliminaciones correspondientes
-                // Ejemplo:
-                // $stmt = $pdo->prepare("DELETE FROM participaciones WHERE usuario_id = :user_id");
-                // $stmt->execute(['user_id' => $user_id]);
+    // 5. Prohibir eliminar cuentas de administrador (incluso para super admin)
+    if ($target_user['rol'] === 'admin') {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No está permitido eliminar cuentas de administrador']);
+        error_log("admin_reto.php: Intento de eliminar cuenta admin - target_id=$user_id, by=$current_user_id");
+        exit;
+    }
 
-                // Finalmente eliminar el usuario
-                $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = :user_id");
-                $stmt->execute(['user_id' => $user_id]);
+    // ────────────────────────────────────────────────
+    // Proceder con la eliminación (solo llega aquí si es admin y el objetivo no es admin)
+    // ────────────────────────────────────────────────
+    try {
+        $pdo->beginTransaction();
 
-                $pdo->commit();
+        // Eliminar registros relacionados en rankings
+        $stmt = $pdo->prepare("DELETE FROM rankings WHERE usuario_id = :user_id");
+        $stmt->execute(['user_id' => $user_id]);
 
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Usuario eliminado correctamente',
-                    'deleted_user_id' => $user_id
-                ]);
-                error_log("admin_reto.php: Usuario eliminado exitosamente - id=$user_id por admin {$_SESSION['user_id']}");
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                $msg = 'Error al eliminar el usuario';
-                if (stripos($e->getMessage(), 'foreign key') !== false || stripos($e->getMessage(), 'constraint') !== false) {
-                    $msg = 'No se puede eliminar: el usuario tiene datos asociados que impiden su eliminación.';
-                }
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => $msg]);
-                error_log("admin_reto.php: Error al eliminar usuario id=$user_id - " . $e->getMessage());
-            }
-            exit;
-        }
+        // Eliminar el usuario
+        $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = :user_id");
+        $stmt->execute(['user_id' => $user_id]);
 
-        // Handle toggle user
-        if (isset($_POST['toggle_habilitado'])) {
-            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
-            if ($user_id === (int)$_SESSION['user_id']) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'No puedes cambiar tu propio estado.']);
-                error_log("admin_reto.php: Admin attempted to toggle own habilitado, user_id=$user_id");
-                exit;
-            }
-            $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE id = :user_id");
-            $stmt->execute(['user_id' => $user_id]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$user) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => "Usuario no encontrado: ID $user_id"]);
-                error_log("admin_reto.php: User not found, user_id=$user_id");
-                exit;
-            }
-            if ($user['rol'] === 'admin') {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'No puedes cambiar el estado de otro administrador.']);
-                error_log("admin_reto.php: Attempt to toggle admin user, user_id=$user_id");
-                exit;
-            }
-            $stmt = $pdo->prepare("UPDATE usuarios SET habilitado = !habilitado WHERE id = :user_id");
-            $stmt->execute(['user_id' => $user_id]);
-            $stmt = $pdo->prepare("SELECT habilitado FROM usuarios WHERE id = :user_id");
-            $stmt->execute(['user_id' => $user_id]);
-            $habilitado = $stmt->fetchColumn();
-            if ($habilitado === false) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => "Usuario no encontrado: ID $user_id"]);
-                error_log("admin_reto.php: User not found after toggle, user_id=$user_id");
-                exit;
-            }
-            $_SESSION['success'] = "Usuario " . ($habilitado ? 'habilitado' : 'deshabilitado') . " correctamente.";
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => $_SESSION['success'], 'habilitado' => $habilitado]);
-            error_log("admin_reto.php: User toggled, id=$user_id, habilitado=$habilitado");
-            exit;
-        }
+        $pdo->commit();
 
-        // Handle change user role
-        if (isset($_POST['change_role'])) {
-            $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
-            $new_role = $_POST['new_role'] ?? '';
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success'          => true,
+            'message'          => 'Usuario eliminado correctamente',
+            'deleted_user_id'  => $user_id
+        ]);
 
-            if (!$user_id || !in_array($new_role, ['user', 'coach', 'admin'])) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'Datos inválidos.']);
-                error_log("admin_reto.php: Invalid change_role data, user_id=$user_id, new_role=$new_role");
-                exit;
-            }
+        error_log("admin_reto.php: Usuario eliminado exitosamente - id=$user_id por admin $current_user_id");
+    } 
+    catch (Exception $e) {
+        $pdo->rollBack();
 
-            if ($user_id === (int)$_SESSION['user_id']) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'No puedes cambiar tu propio rol.']);
-                error_log("admin_reto.php: Admin attempted to change own role, user_id=$user_id");
-                exit;
-            }
-
-            $stmt = $pdo->prepare("SELECT rol FROM usuarios WHERE id = :user_id");
-            $stmt->execute(['user_id' => $user_id]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$user) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => "Usuario no encontrado: ID $user_id"]);
-                error_log("admin_reto.php: User not found for role change, user_id=$user_id");
-                exit;
-            }
-
-            if ($user['rol'] === 'admin' && $new_role !== 'admin') {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['error' => true, 'message' => 'No puedes degradar a otro administrador.']);
-                error_log("admin_reto.php: Attempt to downgrade admin, user_id=$user_id");
-                exit;
-            }
-
-            $stmt = $pdo->prepare("UPDATE usuarios SET rol = :new_role WHERE id = :user_id");
-            $stmt->execute(['new_role' => $new_role, 'user_id' => $user_id]);
-
-            $_SESSION['success'] = "Rol actualizado a '$new_role' correctamente.";
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => $_SESSION['success'], 'new_role' => $new_role]);
-            error_log("admin_reto.php: Role changed, user_id=$user_id, new_role=$new_role");
-            exit;
+        $msg = 'Error al eliminar el usuario';
+        if (stripos($e->getMessage(), 'foreign key') !== false || stripos($e->getMessage(), 'constraint') !== false) {
+            $msg = 'No se puede eliminar: el usuario tiene datos asociados que impiden su eliminación.';
         }
 
         ob_clean();
         header('Content-Type: application/json');
-        echo json_encode(['error' => true, 'message' => 'Solicitud inválida.']);
-        error_log("admin_reto.php: Invalid POST request");
+        echo json_encode(['error' => true, 'message' => $msg]);
+        error_log("admin_reto.php: Error al eliminar usuario id=$user_id por $current_user_id - " . $e->getMessage());
+    }
+
+    if ($current_target_role === 'coach' && $new_role !== 'coach') {
+    $stmt = $pdo->prepare("DELETE FROM coaches WHERE user_id = :user_id");
+    $stmt->execute(['user_id' => $user_id]);
+
+ 
+    $stmt_clean = $pdo->prepare("UPDATE usuarios SET coach_id = NULL, seleccion_couch = NULL WHERE coach_id = :user_id");
+    $stmt_clean->execute(['user_id' => $user_id]);
+}
+
+    exit;
+}
+
+       // Handle toggle user (habilitar / deshabilitar)
+if (isset($_POST['toggle_habilitado'])) {
+
+    // 1. Verificar que el usuario esté logueado (ya se validó antes, pero por seguridad)
+    if (!isset($_SESSION['user_id']) || !isset($_SESSION['rol'])) {
+        http_response_code(403);
+        echo json_encode(['error' => true, 'message' => 'Sesión no válida']);
         exit;
     }
 
+    $current_user_id = (int) $_SESSION['user_id'];
+    $current_rol     = $_SESSION['rol'];
+
+    $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+    if (!$user_id || $user_id <= 0) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'ID de usuario inválido']);
+        exit;
+    }
+
+    // No permitir cambiarse a sí mismo
+    if ($user_id === $current_user_id) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No puedes cambiar tu propio estado.']);
+        error_log("admin_reto.php: Intento de toggle propio - user_id=$user_id, rol=$current_rol");
+        exit;
+    }
+
+    // Obtener datos del usuario objetivo
+    $stmt = $pdo->prepare("SELECT id, rol, habilitado FROM usuarios WHERE id = :id");
+    $stmt->execute(['id' => $user_id]);
+    $target_user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$target_user) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'Usuario no encontrado']);
+        error_log("admin_reto.php: Usuario no encontrado para toggle - id=$user_id");
+        exit;
+    }
+
+    // Regla clave: NADIE puede modificar el estado de un usuario con rol 'admin'
+    if ($target_user['rol'] === 'admin') {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No está permitido cambiar el estado de cuentas de administrador.']);
+        error_log("admin_reto.php: Intento de toggle sobre admin - target_id=$user_id, by_user=$current_user_id ($current_rol)");
+        exit;
+    }
+
+    // Aquí definimos quién tiene permiso para hacer toggle
+    $can_toggle = false;
+
+    if ($current_rol === 'admin') {
+        $can_toggle = true;           // Super admin puede tocar a users y coaches
+    } elseif ($current_rol === 'facilitador_admin') {
+        $can_toggle = true;           // Facilitador también puede tocar a users y coaches
+    }
+
+    if (!$can_toggle) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No tienes permisos para cambiar el estado de usuarios.']);
+        error_log("admin_reto.php: Intento de toggle sin permiso - by_user=$current_user_id ($current_rol), target=$user_id");
+        exit;
+    }
+
+    // ────────────────────────────────────────────────
+    // Realizar el cambio
+    // ────────────────────────────────────────────────
+    $new_habilitado = !$target_user['habilitado'];
+
+    $stmt = $pdo->prepare("UPDATE usuarios SET habilitado = :habilitado WHERE id = :id");
+    $stmt->execute([
+        'habilitado' => $new_habilitado ? 1 : 0,
+        'id'         => $user_id
+    ]);
+
+    // Confirmar el nuevo valor
+    $stmt = $pdo->prepare("SELECT habilitado FROM usuarios WHERE id = :id");
+    $stmt->execute(['id' => $user_id]);
+    $habilitado = (bool) $stmt->fetchColumn();
+
+    $message = "Usuario " . ($habilitado ? 'habilitado' : 'deshabilitado') . " correctamente.";
+
+    ob_clean();
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success'    => true,
+        'message'    => $message,
+        'habilitado' => $habilitado
+    ]);
+
+    error_log("admin_reto.php: Toggle exitoso - id=$user_id, nuevo estado=$habilitado, por=$current_user_id ($current_rol)");
+    exit;
+}
+      // Handle change user role + sincronización con tabla coaches
+if (isset($_POST['change_role'])) {
+
+    // 1. Verificar sesión y rol actual del que está ejecutando la acción
+    if (!isset($_SESSION['user_id']) || !isset($_SESSION['rol'])) {
+        http_response_code(403);
+        echo json_encode(['error' => true, 'message' => 'Sesión no válida']);
+        exit;
+    }
+
+    $current_user_id = (int) $_SESSION['user_id'];
+    $current_rol     = $_SESSION['rol'];
+
+    // Solo super admin puede cambiar roles
+    if ($current_rol !== 'admin') {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No tienes permiso para cambiar roles de usuarios.']);
+        error_log("admin_reto.php: Intento de cambio de rol sin permiso - by_user=$current_user_id ($current_rol)");
+        exit;
+    }
+
+    // 2. Validación básica de entrada
+    $user_id = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+    $new_role = trim($_POST['new_role'] ?? '');
+
+    if (!$user_id || $user_id <= 0 || !in_array($new_role, ['user', 'coach', 'admin', 'facilitador_admin'], true)) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'Datos inválidos.']);
+        error_log("admin_reto.php: Invalid change_role data - user_id=$user_id, new_role='$new_role', by=$current_user_id");
+        exit;
+    }
+
+    // 3. No permitir cambiarse a sí mismo
+    if ($user_id === $current_user_id) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No puedes cambiar tu propio rol.']);
+        error_log("admin_reto.php: Intento de cambiar rol propio - user_id=$user_id, by=$current_user_id");
+        exit;
+    }
+
+    // 4. Obtener datos actuales del usuario objetivo
+    $stmt = $pdo->prepare("SELECT rol, nombre, apellido_paterno, apellido_materno FROM usuarios WHERE id = :user_id");
+    $stmt->execute(['user_id' => $user_id]);
+    $target = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$target) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'Usuario no encontrado.']);
+        error_log("admin_reto.php: Usuario no encontrado para cambio de rol - target_id=$user_id, by=$current_user_id");
+        exit;
+    }
+
+    $current_target_role = $target['rol'];
+
+    // 5. Regla de negocio: Nadie puede degradar a otro administrador
+    if ($current_target_role === 'admin' && $new_role !== 'admin') {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'No está permitido degradar cuentas de administrador.']);
+        error_log("admin_reto.php: Intento de degradar admin - target_id=$user_id ($current_target_role → $new_role), by=$current_user_id");
+        exit;
+    }
+
+    // 6. Evitar cambio innecesario
+    if ($new_role === $current_target_role) {
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'message' => 'El usuario ya tiene el rol seleccionado.',
+            'new_role' => $new_role
+        ]);
+        exit;
+    }
+
+    // ────────────────────────────────────────────────
+    // Inicio de transacción para rol + coaches
+    // ────────────────────────────────────────────────
+    try {
+        $pdo->beginTransaction();
+
+        // 7. Actualizar rol en usuarios
+        $stmt = $pdo->prepare("UPDATE usuarios SET rol = :new_role WHERE id = :user_id");
+        $stmt->execute([
+            'new_role'  => $new_role,
+            'user_id'   => $user_id
+        ]);
+
+        // 8. Sincronizar tabla coaches
+        if ($new_role === 'coach') {
+            // Construir nombre completo
+            $full_name = trim($target['nombre'] . ' ' . $target['apellido_paterno'] . ' ' . ($target['apellido_materno'] ?? ''));
+            $full_name = trim($full_name) ?: 'Usuario ' . $user_id; // fallback por si está vacío
+
+            // Verificar si ya existe
+            $stmt = $pdo->prepare("SELECT id FROM coaches WHERE user_id = :user_id");
+            $stmt->execute(['user_id' => $user_id]);
+            $existing = $stmt->fetchColumn();
+
+            if ($existing) {
+                // Actualizar nombre (por si cambió)
+                $stmt = $pdo->prepare("UPDATE coaches SET name = :name WHERE user_id = :user_id");
+                $stmt->execute(['name' => $full_name, 'user_id' => $user_id]);
+                error_log("admin_reto.php: Coach actualizado - user_id=$user_id, name='$full_name'");
+            } else {
+                // Crear nuevo
+                $stmt = $pdo->prepare("INSERT INTO coaches (name, user_id, created_at) VALUES (:name, :user_id, NOW())");
+                $stmt->execute(['name' => $full_name, 'user_id' => $user_id]);
+                error_log("admin_reto.php: Coach creado - user_id=$user_id, name='$full_name'");
+            }
+        } 
+        elseif ($current_target_role === 'coach' && $new_role !== 'coach') {
+            // Eliminar de coaches si ya no es coach
+            $stmt = $pdo->prepare("DELETE FROM coaches WHERE user_id = :user_id");
+            $stmt->execute(['user_id' => $user_id]);
+            $deleted = $stmt->rowCount();
+            if ($deleted > 0) {
+                error_log("admin_reto.php: Coach eliminado - user_id=$user_id (rol cambiado a $new_role)");
+            }
+        }
+
+        $pdo->commit();
+
+        // Respuesta exitosa
+        $message = "Rol actualizado a '$new_role' correctamente.";
+        if ($new_role === 'coach') {
+            $message .= " (sincronizado en tabla coaches)";
+        } elseif ($current_target_role === 'coach') {
+            $message .= " (eliminado de coaches)";
+        }
+
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success'   => true,
+            'message'   => $message,
+            'new_role'  => $new_role
+        ]);
+
+        error_log("admin_reto.php: Cambio de rol exitoso + coaches sync - target_id=$user_id ($current_target_role → $new_role), by=$current_user_id");
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        error_log("admin_reto.php: Error en transacción change_role + coaches - user_id=$user_id - " . $e->getMessage());
+
+        ob_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => true, 'message' => 'Error al procesar el cambio: ' . $e->getMessage()]);
+        exit;
+    }
+
+    exit;
+}
+    }
+
     // Fetch all retos and users
-    $stmt = $pdo->query("SELECT id, numero_reto, start_date, end_date FROM retos ORDER BY numero_reto ASC");
+    $stmt = $pdo->query("SELECT id, nombre, start_date, end_date FROM retos ORDER BY start_date DESC");
     $retos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $stmt = $pdo->prepare("
-        SELECT 
-            id, 
-            email, 
-            nombre, 
-            apellido_paterno, 
-            apellido_materno, 
-            rol, 
-            habilitado, 
-            contrasena 
-        FROM usuarios 
-        ORDER BY apellido_paterno ASC, apellido_materno ASC, nombre ASC
-    ");
-    $stmt->execute();
-    $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    SELECT 
+        u.id,
+        u.email,
+        u.nombre,
+        u.apellido_paterno,
+        u.apellido_materno,
+        u.rol,
+        u.habilitado,
+        u.contrasena,
+        u.facilitador,
+        u.coach_id,
+        
+        -- Nombre completo del coach
+        CONCAT(c.nombre, ' ', c.apellido_paterno, ' ', COALESCE(c.apellido_materno, '')) AS coach_nombre,
+        
+        -- Peso semana 0 (el más reciente si hay varios)
+        (
+            SELECT peso 
+            FROM datos_semanales ds0 
+            WHERE ds0.usuario_id = u.id 
+              AND ds0.semana = 0
+            ORDER BY ds0.created_at DESC 
+            LIMIT 1
+        ) AS peso_semana_0,
+        
+        -- Peso semana 3 (el más reciente)
+        (
+            SELECT peso 
+            FROM datos_semanales ds3 
+            WHERE ds3.usuario_id = u.id 
+              AND ds3.semana = 3
+            ORDER BY ds3.created_at DESC 
+            LIMIT 1
+        ) AS peso_semana_3
+
+    FROM usuarios u
+    LEFT JOIN usuarios c ON c.id = u.coach_id
+    
+    ORDER BY u.apellido_paterno ASC, u.apellido_materno ASC, u.nombre ASC
+");
+$stmt->execute();
+$usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
@@ -565,128 +849,227 @@ try {
                     <?php unset($_SESSION['error']); ?>
                 <?php endif; ?>
 
-                <!-- Crear Reto -->
-                <div class="form-card retos-section">
-                    <h2>Crear Nuevo Reto</h2>
-                    <form id="create-reto-form" method="POST">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                        <input type="hidden" name="create_reto" value="1">
-                        <div class="form-group">
-                            <label for="start_date">Fecha de Inicio</label>
-                            <input type="date" id="start_date" name="start_date" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="end_date">Fecha de Fin</label>
-                            <input type="date" id="end_date" name="end_date" required>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-submit">Crear Reto</button>
-                        </div>
-                    </form>
-                </div>
+    <!-- Crear Reto -->
+<div class="form-card retos-section">
+    <h2>Crear Nuevo Reto</h2>
+    <form id="create-reto-form" method="POST">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+        <input type="hidden" name="create_reto" value="1">
+        
+        <div class="form-group">
+            <label for="nombre">Nombre del reto <span style="color:#c62828;">*</span></label>
+            <input 
+                type="text" 
+                id="nombre" 
+                name="nombre" 
+                placeholder="Ej: Reto 7 2026" 
+                maxlength="300" 
+                required
+            >
+            <small style="color:#555; display:block; margin-top:6px;">
+                Máximo 300 caracteres. Será visible en listados y reportes.
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="start_date">Fecha de Inicio</label>
+            <input type="date" id="start_date" name="start_date" required>
+        </div>
+        <div class="form-group">
+            <label for="end_date">Fecha de Fin</label>
+            <input type="date" id="end_date" name="end_date" required>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-submit">Crear Reto</button>
+        </div>
+    </form>
+</div>
 
                 <!-- Lista de Retos -->
                 <div class="retos-section">
                     <h2>Retos Existentes</h2>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nº Reto</th>
-                                <th>Fecha Inicio</th>
-                                <th>Fecha Fin</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($retos as $reto): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($reto['id']); ?></td>
-                                    <td><?php echo htmlspecialchars($reto['numero_reto']); ?></td>
-                                    <td><?php echo date('d/m/Y', strtotime($reto['start_date'])); ?></td>
-                                    <td><?php echo date('d/m/Y', strtotime($reto['end_date'])); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                            <?php if (empty($retos)): ?>
-                                <tr>
-                                    <td colspan="4">No hay retos disponibles.</td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Fin</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php foreach ($retos as $reto): ?>
+            <tr>
+                <td><?php echo htmlspecialchars($reto['id']); ?></td>
+                <td><?php echo htmlspecialchars($reto['nombre'] ?: '<em>Sin nombre</em>'); ?></td>
+                <td><?php echo date('d/m/Y', strtotime($reto['start_date'])); ?></td>
+                <td><?php echo date('d/m/Y', strtotime($reto['end_date'])); ?></td>
+            </tr>
+        <?php endforeach; ?>
+        <?php if (empty($retos)): ?>
+            <tr>
+                <td colspan="4">No hay retos disponibles.</td>
+            </tr>
+        <?php endif; ?>
+    </tbody>
+</table>
                 </div>
 
                 <!-- Administrar Usuarios -->
-                <div class="users-section">
-                    <h2>Administrar Usuarios</h2>
-                    <div class="search-filter">
-                        <input type="text" id="search-users" placeholder="Buscar por email o nombre completo...">
-                        <select id="filter-habilitado">
-                            <option value="all">Todos los estados</option>
-                            <option value="1">Activo</option>
-                            <option value="0">Inactivo</option>
-                        </select>
-                        <select id="filter-rol">
-                            <option value="all">Todos los roles</option>
-                            <option value="admin">Administrador</option>
-                            <option value="coach">Coach</option>
-                            <option value="user">Usuario</option>
-                        </select>
-                    </div>
+<div class="users-section">
+    <h2>Administrar Usuarios</h2>
+    
+    <?php if ($isFacilitador): ?>
+        <div class="alert" style="background:#e3f2fd; color:#0d47a1; border:1px solid #90caf9; margin-bottom:20px;">
+            Modo facilitador: solo puedes habilitar / deshabilitar usuarios (no cambiar roles ni eliminar).
+        </div>
+    <?php endif; ?>
 
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Email</th>
-                                <th>Nombre Completo</th>
-                                <th>Rol</th>
-                                <th>Contraseña</th>
-                                <th>Estado</th>
-                                <th>Acción</th>
-                                <th>Eliminar</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table">
-                            <?php foreach ($usuarios as $usuario): 
-                                $nombre_completo = trim($usuario['nombre'] . ' ' . $usuario['apellido_paterno'] . ' ' . ($usuario['apellido_materno'] ?? ''));
-                                $nombre_completo = trim($nombre_completo);
-                            ?>
-                                <tr data-user-id="<?php echo $usuario['id']; ?>">
-                                    <td><?php echo htmlspecialchars($usuario['email']); ?></td>
-                                    <td><?php echo htmlspecialchars($nombre_completo); ?></td>
-                                    <td>
-                                        <select class="change-role-select" data-user-id="<?php echo $usuario['id']; ?>"
-                                            <?php echo ($usuario['id'] == $_SESSION['user_id'] || $usuario['rol'] === 'admin') ? 'disabled' : ''; ?>>
-                                            <option value="user" <?php echo $usuario['rol'] === 'user' ? 'selected' : ''; ?>>Usuario</option>
-                                            <option value="coach" <?php echo $usuario['rol'] === 'coach' ? 'selected' : ''; ?>>Coach</option>
-                                            <option value="admin" <?php echo $usuario['rol'] === 'admin' ? 'selected' : ''; ?>>Administrador</option>
-                                        </select>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($usuario['contrasena']); ?></td>
-                                    <td class="user-status"><?php echo $usuario['habilitado'] ? 'Habilitado' : 'Deshabilitado'; ?></td>
-                                    <td>
-                                        <button class="btn btn-toggle toggle-habilitado" 
-                                                data-user-id="<?php echo $usuario['id']; ?>" 
-                                                <?php echo ($usuario['id'] == $_SESSION['user_id'] || $usuario['rol'] === 'admin') ? 'disabled' : ''; ?>>
-                                            <?php echo $usuario['habilitado'] ? 'Deshabilitar' : 'Habilitar'; ?>
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-delete delete-user"
-                                                data-user-id="<?php echo $usuario['id']; ?>"
-                                                data-user-name="<?php echo htmlspecialchars($nombre_completo); ?>"
-                                                <?php echo ($usuario['id'] == $_SESSION['user_id'] || $usuario['rol'] === 'admin') ? 'disabled' : ''; ?>>
-                                            Eliminar
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            <?php if (empty($usuarios)): ?>
-                                <tr><td colspan="7">No hay usuarios disponibles.</td></tr>
+    <div class="search-filter">
+        <input type="text" id="search-users" placeholder="Buscar por email o nombre completo...">
+        <select id="filter-habilitado">
+            <option value="all">Todos los estados</option>
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+        </select>
+        <select id="filter-rol">
+        <option value="all">Todos los roles</option>
+        <option value="admin">Administrador</option>
+        <option value="facilitador_admin">Facilitador Admin</option>
+        <option value="coach">Coach</option>
+        <option value="user">Usuario</option>
+</select>
+    </div>
+
+    <table class="data-table">
+       <thead>
+    <tr>
+        <th>Email</th>
+        <th>Nombre Completo</th>
+        <th>Coach</th>
+        <th>Facilitador</th>
+        <th>Peso Sem 0</th>
+        <th>Peso Sem 3</th>
+        <th>Rol</th>
+        <th>Contraseña</th>
+        <th>Estado</th>
+        <th>Acción</th>
+        <?php if ($canDeleteUsers): ?>
+            <th>Eliminar</th>
+        <?php endif; ?>
+    </tr>
+</thead>
+        <tbody id="users-table">
+            <?php foreach ($usuarios as $usuario): 
+                $nombre_completo = trim($usuario['nombre'] . ' ' . $usuario['apellido_paterno'] . ' ' . ($usuario['apellido_materno'] ?? ''));
+                $nombre_completo = trim($nombre_completo);
+                $isSelf = ($usuario['id'] == $_SESSION['user_id']);
+                $isAdminUser = ($usuario['rol'] === 'admin');
+            ?>
+                <tr data-user-id="<?php echo $usuario['id']; ?>">
+                    <td><?php echo htmlspecialchars($usuario['email']); ?></td>
+                    <td><?php echo htmlspecialchars($nombre_completo); ?></td>
+                            <td>
+            <?php 
+            if (!empty($usuario['coach_nombre'])) {
+                echo htmlspecialchars(trim($usuario['coach_nombre']));
+            } else {
+                echo '<span style="color:#888;">—</span>';
+            }
+            ?>
+        </td>
+        <td>
+            <?php 
+            echo !empty($usuario['facilitador']) 
+                ? htmlspecialchars($usuario['facilitador']) 
+                : '<span style="color:#888;">—</span>'; 
+            ?>
+        </td>
+        <td style="text-align: right;">
+            <?php 
+            if ($usuario['peso_semana_0'] !== null) {
+                echo number_format($usuario['peso_semana_0'], 1) . ' kg';
+            } else {
+                echo '<span style="color:#888;">—</span>';
+            }
+            ?>
+        </td>
+        <td style="text-align: right;">
+            <?php 
+            if ($usuario['peso_semana_3'] !== null) {
+                echo number_format($usuario['peso_semana_3'], 1) . ' kg';
+            } else {
+                echo '<span style="color:#888;">—</span>';
+            }
+            ?>
+        </td>
+                    
+            
+                    <td>
+                        <?php if ($canChangeRole && !$isSelf && !$isAdminUser): ?>
+                            <select class="change-role-select" data-user-id="<?php echo $usuario['id']; ?>">
+                            <option value="user"               <?php echo $usuario['rol'] === 'user'               ? 'selected' : ''; ?>>Usuario</option>
+                            <option value="coach"              <?php echo $usuario['rol'] === 'coach'              ? 'selected' : ''; ?>>Coach</option>
+                            <option value="facilitador_admin"  <?php echo $usuario['rol'] === 'facilitador_admin'  ? 'selected' : ''; ?>>Facilitador Admin</option>
+                            <option value="admin"              <?php echo $usuario['rol'] === 'admin'              ? 'selected' : ''; ?>>Administrador</option>
+                        </select>
+                        <?php else: ?>
+                            <strong><?php echo ucfirst($usuario['rol']); ?></strong>
+                        <?php endif; ?>
+                    </td>
+
+                    <!-- Contraseña (recomendación: ocultarla a facilitadores) -->
+                    <td>
+                        <?php if ($isSuperAdmin): ?>
+                            <?php echo htmlspecialchars($usuario['contrasena'] ?? '—'); ?>
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </td>
+
+                    <td class="user-status">
+                        <?php echo $usuario['habilitado'] ? '<span style="color:#2e7d32;">Habilitado</span>' : '<span style="color:#c62828;">Deshabilitado</span>'; ?>
+                    </td>
+
+                    <!-- Toggle habilitado -->
+                    <td>
+                        <?php if ($canToggleUsers && !$isSelf && !$isAdminUser): ?>
+                            <button class="btn btn-toggle toggle-habilitado" 
+                                    data-user-id="<?php echo $usuario['id']; ?>">
+                                <?php echo $usuario['habilitado'] ? 'Deshabilitar' : 'Habilitar'; ?>
+                            </button>
+                        <?php else: ?>
+                            <span style="color:#888;">—</span>
+                        <?php endif; ?>
+                    </td>
+
+                    <!-- Eliminar -->
+                    <?php if ($canDeleteUsers): ?>
+                        <td>
+                            <?php if (!$isSelf && !$isAdminUser): ?>
+                                <button class="btn btn-delete delete-user"
+                                        data-user-id="<?php echo $usuario['id']; ?>"
+                                        data-user-name="<?php echo htmlspecialchars($nombre_completo); ?>">
+                                    Eliminar
+                                </button>
+                            <?php else: ?>
+                                <span style="color:#888;">—</span>
                             <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                        </td>
+                    <?php endif; ?>
+                </tr>
+            <?php endforeach; ?>
 
+            <?php if (empty($usuarios)): ?>
+                <tr><td colspan="<?php echo $canDeleteUsers ? '7' : '6'; ?>">No hay usuarios disponibles.</td></tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+
+
+
+                <?php if ($isSuperAdmin): ?>
                 <!-- Administrar Rankings -->
                 <div class="rankings-section">
                     <h2>Administrar Rankings</h2>
@@ -700,7 +1083,7 @@ try {
                                 <label for="reto_id_fotos">Reto</label>
                                 <select id="reto_id_fotos" name="reto_id" required>
                                     <?php foreach ($retos as $reto): ?>
-                                        <option value="<?php echo $reto['id']; ?>">Reto Nº<?php echo $reto['numero_reto']; ?> (ID: <?php echo $reto['id']; ?>) - <?php echo date('d/m/Y', strtotime($reto['start_date'])); ?> a <?php echo date('d/m/Y', strtotime($reto['end_date'])); ?></option>
+                                        <option value="<?php echo $reto['id']; ?>">Ret_CT_<?php echo $reto['id']; ?> (<?php echo date('d/m/Y', strtotime($reto['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($reto['end_date'])); ?>)</option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -744,7 +1127,7 @@ try {
                                 <label for="reto_id_elite">Reto</label>
                                 <select id="reto_id_elite" name="reto_id" required>
                                     <?php foreach ($retos as $reto): ?>
-                                        <option value="<?php echo $reto['id']; ?>">Reto Nº<?php echo $reto['numero_reto']; ?> (ID: <?php echo $reto['id']; ?>) - <?php echo date('d/m/Y', strtotime($reto['start_date'])); ?> a <?php echo date('d/m/Y', strtotime($reto['end_date'])); ?></option>
+                                        <option value="<?php echo $reto['id']; ?>">Ret_CT_<?php echo $reto['id']; ?> (<?php echo date('d/m/Y', strtotime($reto['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($reto['end_date'])); ?>)</option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -782,16 +1165,16 @@ try {
             </div>
         </main>
     </div>
-
+<?php endif; ?>
     <script>
-        // Close alerts
+   
         document.querySelectorAll('.alert-close').forEach(button => {
             button.addEventListener('click', () => {
                 button.parentElement.remove();
             });
         });
 
-        // Search and filter users
+     
         function filterUsers() {
             const search = document.getElementById('search-users').value.toLowerCase();
             const habilitadoFilter = document.getElementById('filter-habilitado').value;
@@ -817,7 +1200,7 @@ try {
         document.getElementById('filter-habilitado').addEventListener('change', filterUsers);
         document.getElementById('filter-rol').addEventListener('change', filterUsers);
 
-        // Create reto form
+ 
         document.getElementById('create-reto-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -853,7 +1236,7 @@ try {
             }
         });
 
-        // Toggle user
+       
         document.querySelectorAll('.toggle-habilitado').forEach(button => {
             button.addEventListener('click', async function() {
                 if (this.disabled) return;
@@ -894,7 +1277,7 @@ try {
             });
         });
 
-        // Change user role
+        
         document.querySelectorAll('.change-role-select').forEach(select => {
             select.addEventListener('change', async function() {
                 if (this.disabled) return;
@@ -943,7 +1326,7 @@ try {
             });
         });
 
-        // Update ranking forms
+      
         ['fotos', 'elite'].forEach(tipo => {
             document.getElementById(`update-ranking-${tipo}-form`).addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -981,7 +1364,7 @@ try {
             });
         });
 
-        // Eliminar usuario
+      
         document.querySelectorAll('.delete-user').forEach(button => {
             button.addEventListener('click', async function() {
                 if (this.disabled) return;
