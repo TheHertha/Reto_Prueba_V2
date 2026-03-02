@@ -46,15 +46,22 @@ $rango_edad = ($age >= 20 && $age <= 39) ? '20-39' : (($age >= 40 && $age <= 59)
 
 
 try {
-    $stmt = $pdo->query("SELECT id, start_date, end_date FROM retos WHERE CURDATE() BETWEEN start_date AND end_date LIMIT 1");
+    $stmt = $pdo->query("
+    SELECT id, nombre, start_date, end_date 
+    FROM retos 
+    WHERE CURDATE() BETWEEN start_date AND end_date 
+    LIMIT 1
+");
     $reto = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$reto) {
-        $_SESSION['error'] = "No hay un reto activo. Contacta al administrador para crear uno.";
-        error_log("reto.php: No active reto found");
-        header("Location: inicio.php?no_redirect=1");
-        exit;
-    }
-    $reto_id = $reto['id'];
+if (!$reto) {
+    $_SESSION['error'] = "No hay un reto activo. Contacta al administrador para crear uno.";
+    error_log("reto.php: No active reto found");
+    header("Location: inicio.php?no_redirect=1");
+    exit;
+}
+
+$reto_id     = $reto['id'];
+$reto_nombre = $reto['nombre'] ?? 'Reto sin nombre';   // fallback por si es NULL (aunque no debería)
 
 
    $stmt = $pdo->prepare("
@@ -815,7 +822,7 @@ body {
 <body>
     <header class="header">
         <a href="inicio.php" class="back-btn">← Regresar</a>
-        <h1 class="title">CAT21 - RETO 2025 (Reto <?php echo $reto_id; ?>)</h1>
+        <h1 class="title">CAT21 - <?php echo htmlspecialchars($reto_nombre); ?></h1>
         <div>
             <?php if ($is_admin): ?>
                 <a href="admin_reto.php" class="admin-btn">Administrar Reto</a>
@@ -833,38 +840,75 @@ body {
             <?php unset($_SESSION['success']); ?>
         <?php endif; ?>
 
-        <div class="carousel-container">
-            <?php
-            $semanas = [
-                ['name' => 'Semana Inicial', 'semana' => 0, 'color' => 'rojo'],
-                ['name' => 'Semana 1', 'semana' => 1, 'color' => 'amarillo'],
-                ['name' => 'Semana 2', 'semana' => 2, 'color' => 'rojo'],
-                ['name' => 'Semana 3', 'semana' => 3, 'color' => 'amarillo']
-            ];
-            foreach ($semanas as $semana): ?>
-                <div class="semana-card">
-                    <h2><?php echo $semana['name']; ?></h2>
-                    <form action="<?php echo $semana['semana'] == 1 || $semana['semana'] == 2 ? '#' : 'submit_reto.php'; ?>" method="POST" enctype="multipart/form-data" <?php echo isset($user_data[$semana['semana']]) ? 'class="disabled"' : ''; ?>>
-                        <input type="hidden" name="semana" value="<?php echo $semana['semana']; ?>">
-                        <input type="hidden" name="reto_id" value="<?php echo $reto_id; ?>">
-                        <input type="number" step="0.1" name="estatura" placeholder="Estatura (cm)" value="<?php echo isset($user_data[$semana['semana']]) ? $user_data[$semana['semana']]['estatura'] : ''; ?>" <?php echo isset($user_data[$semana['semana']]) ? 'disabled' : ($semana['semana'] != 0 ? 'disabled' : ''); ?> <?php echo $semana['semana'] == 0 ? 'required' : ''; ?>>
-                        <input type="number" step="0.1" name="peso" placeholder="Peso (kg)" value="<?php echo isset($user_data[$semana['semana']]) ? $user_data[$semana['semana']]['peso'] : ''; ?>" <?php echo isset($user_data[$semana['semana']]) ? 'disabled' : ''; ?> required>
-                        <input type="number" step="0.1" name="masa" placeholder="Grasa Visceral" value="<?php echo isset($user_data[$semana['semana']]) ? $user_data[$semana['semana']]['masa'] : ''; ?>" <?php echo isset($user_data[$semana['semana']]) ? 'disabled' : ''; ?> required>
-                        <input type="number" step="0.1" name="grasa" placeholder="Grasa (%)" value="<?php echo isset($user_data[$semana['semana']]) ? $user_data[$semana['semana']]['grasa'] : ''; ?>" <?php echo isset($user_data[$semana['semana']]) ? 'disabled' : ''; ?> required>
-                        <input type="number" step="0.1" name="musculo" placeholder="Músculo (%)" value="<?php echo isset($user_data[$semana['semana']]) ? $user_data[$semana['semana']]['musculo'] : ''; ?>" <?php echo isset($user_data[$semana['semana']]) ? 'disabled' : ''; ?> required>
-                        <?php if ($semana['semana'] == 0 || $semana['semana'] == 3): ?>
-                            <input type="file" name="image" accept="image/jpeg,image/png,image/gif" <?php echo isset($user_data[$semana['semana']]) ? 'disabled' : ''; ?>>
-                            <?php if (isset($user_data[$semana['semana']]['image']) && $user_data[$semana['semana']]['image']): ?>
-                                <img src="Uploads/<?php echo htmlspecialchars($user_data[$semana['semana']]['image']); ?>" class="image-preview show">
-                            <?php endif; ?>
-                        <?php endif; ?>
-                        <button type="submit" class="btn-<?php echo $semana['color']; ?> <?php echo isset($user_data[$semana['semana']]) ? 'btn-disabled' : ''; ?>" <?php echo isset($user_data[$semana['semana']]) ? 'disabled' : ''; ?>>
-                            <?php echo isset($user_data[$semana['semana']]) ? 'DATOS ENVIADOS' : 'Enviar Datos'; ?>
-                        </button>
-                    </form>
-                </div>
-            <?php endforeach; ?>
+       <div class="carousel-container">
+    <?php
+    $semanas = [
+        ['name' => 'Semana Inicial', 'semana' => 0, 'color' => 'rojo'],
+        ['name' => 'Semana 1', 'semana' => 1, 'color' => 'amarillo'],
+        ['name' => 'Semana 2', 'semana' => 2, 'color' => 'rojo'],
+        ['name' => 'Semana 3', 'semana' => 3, 'color' => 'amarillo']
+    ];
+
+    // Fechas del reto (ya las tienes cargadas)
+    $start_date = new DateTime($reto['start_date']);
+    $end_date   = new DateTime($reto['end_date']);
+    $current_date = new DateTime();
+
+    // Fecha de activación especial para Semana 3: últimos 3 días (end_date - 3 días)
+    $semana3_activation = clone $end_date;
+    $semana3_activation->modify('-3 days');  // Activa desde el día end_date - 3
+
+    foreach ($semanas as $semana) {
+        $semana_num = $semana['semana'];
+
+        // Fecha de activación por defecto: inmediata para semanas 0-2, especial para semana 3
+        if ($semana_num === 3) {
+            $activation_date = $semana3_activation;
+        } else {
+            $activation_date = clone $start_date;
+            // Opcional: si quieres retrasar un poco las semanas 1 y 2 también, puedes agregar aquí
+            // $activation_date->add(new DateInterval('P' . ($semana_num * 7) . 'D'));
+        }
+
+        // ¿Ya pasó la fecha de activación?
+        $is_past_activation = $current_date >= $activation_date;
+
+        // ¿Ya se envió esta semana?
+        $is_sent = isset($user_data[$semana_num]);
+
+        // Deshabilitado si: ya enviado O aún no llega la fecha de activación
+        $is_disabled = $is_sent || !$is_past_activation;
+
+        // Mensaje informativo si no está activo (opcional, puedes quitarlo)
+        $message = '';
+        if (!$is_past_activation && !$is_sent) {
+            $message = '<p style="color:#FF0000; font-weight:bold; margin-bottom:10px;">Disponible a partir del ' . $activation_date->format('d/m/Y') . '</p>';
+        }
+        ?>
+        <div class="semana-card">
+            <h2><?php echo $semana['name']; ?></h2>
+            <?php echo $message; ?>
+            <form action="<?php echo $semana_num == 1 || $semana_num == 2 ? '#' : 'submit_reto.php'; ?>" method="POST" enctype="multipart/form-data" <?php echo $is_disabled ? 'class="disabled"' : ''; ?>>
+                <input type="hidden" name="semana" value="<?php echo $semana_num; ?>">
+                <input type="hidden" name="reto_id" value="<?php echo $reto_id; ?>">
+                <input type="number" step="0.1" name="estatura" placeholder="Estatura (cm)" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['estatura'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ($semana_num != 0 ? 'disabled' : ''); ?> <?php echo $semana_num == 0 ? 'required' : ''; ?>>
+                <input type="number" step="0.1" name="peso" placeholder="Peso (kg)" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['peso'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?> required>
+                <input type="number" step="0.1" name="masa" placeholder="Grasa Visceral" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['masa'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?> required>
+                <input type="number" step="0.1" name="grasa" placeholder="Grasa (%)" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['grasa'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?> required>
+                <input type="number" step="0.1" name="musculo" placeholder="Músculo (%)" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['musculo'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?> required>
+                <?php if ($semana_num == 0 || $semana_num == 3): ?>
+                    <input type="file" name="image" accept="image/jpeg,image/png,image/gif" <?php echo $is_disabled ? 'disabled' : ''; ?>>
+                    <?php if (isset($user_data[$semana_num]['image']) && $user_data[$semana_num]['image']): ?>
+                        <img src="Uploads/<?php echo htmlspecialchars($user_data[$semana_num]['image']); ?>" class="image-preview show">
+                    <?php endif; ?>
+                <?php endif; ?>
+                <button type="submit" class="btn-<?php echo $semana['color']; ?> <?php echo $is_disabled ? 'btn-disabled' : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?>>
+                    <?php echo $is_sent ? 'DATOS ENVIADOS' : 'Enviar Datos'; ?>
+                </button>
+            </form>
         </div>
+    <?php } ?>
+</div>
 
         <div class="progress-container">
             <h2>Tu Progreso (Reto <?php echo $reto_id; ?>)</h2>

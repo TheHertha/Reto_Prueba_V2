@@ -1,12 +1,12 @@
 <?php
-// Configuración de la base de datos
+
 $host = 'localhost';
 $username = 'root';
-$password = 'Sk2Lo9R+k3.y';//
+$password = '';
 $database = 'retofitcat21';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$database;charset=utf8", $username, $password);
+    $pdo = new PDO("mysql:host=$host;dbname=$database;charset=utf8mb4", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -22,11 +22,11 @@ $ALLOWED_COACHES = ['coach1' => 'Coach 1', 'coach2' => 'Coach 2'];
 // Rate limiting settings
 define('MAX_REGISTRATION_ATTEMPTS', 5);
 define('MAX_LOGIN_ATTEMPTS', 5);
-define('LOCKOUT_TIME', 15 * 60); // 15 minutes in seconds
+define('LOCKOUT_TIME', 15 * 60); 
 
-// Función para subir imágenes
+
 function subirImagen($archivo) {
-    $directorioDestino = "Uploads/"; // Asegúrate de que la carpeta en el servidor también sea "Uploads" con U mayúscula
+    $directorioDestino = "Uploads/"; 
     
     if (!file_exists($directorioDestino)) {
         mkdir($directorioDestino, 0777, true);

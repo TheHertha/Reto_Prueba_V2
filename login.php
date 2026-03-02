@@ -644,7 +644,69 @@ body {
   }
 }
 
+.register-cta {
+    display: inline-block;
+    background: linear-gradient(135deg, #FFD700 0%, #ffea80 50%, #FFD700 100%);
+    color: #000000;                    /* texto negro por defecto */
+    font-weight: 500;
+    font-size: 15px;
+    padding: 14px 32px;
+    border-radius: 50px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    box-shadow: 
+        0 6px 20px rgba(255, 215, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transition: all 0.35s ease;
+    position: relative;
+    overflow: hidden;
+}
 
+.register-cta:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 
+        0 12px 30px rgba(255, 215, 0, 0.55),
+        0 0 0 3px rgba(255, 215, 0, 0.25);
+    background: #000000;
+    color: #FFD700;
+}
+
+.register-cta:active {
+    transform: translateY(-1px);
+}
+
+/* Pulso sutil continuo (opcional pero muy llamativo) */
+.register-cta::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,215,0,0.18) 0%, transparent 60%);
+    opacity: 0;
+    animation: pulse-glow 4s infinite ease-in-out;
+    pointer-events: none;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0; transform: scale(0.8); }
+    50%      { opacity: 1; transform: scale(1.1); }
+}
+
+.button-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 30px auto;   /* mantiene el margen inferior que ya tenías */
+    width: 100%;
+}
+
+.login-btn {
+    /* ... tus estilos actuales ... */
+    min-width: 180px;           /* opcional: evita que se vea muy angosto */
+    /* si quieres que ocupe más ancho en móvil, puedes quitar min-width */
+}
 
     </style>
 </head>
@@ -703,10 +765,12 @@ body {
       <input type="checkbox" id="recordar" name="recordar">
       <label for="recordar">Recordar sesión</label>
     </div>
+   <div class="button-wrapper">
     <button type="submit" class="login-btn">Entrar</button>
+</div>
     <div class="form-links">
-      <a href="register.php">¿No tienes cuenta? Regístrate aquí</a>
-    </div>
+  <a href="register.php" class="register-cta">¡Regístrate ahora!</a>
+</div>
 </form>
             </div>
         </div>

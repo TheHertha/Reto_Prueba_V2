@@ -68,6 +68,7 @@ $genero = $_POST['genero'] ?? '';
 $pais = $_POST['pais'] ?? '';
 $telefono = preg_replace('/[^0-9]/', '', $_POST['telefono'] ?? '');
 $idHerbalife = trim($_POST['idHerbalife'] ?? '');
+$facilitador = trim($_POST['facilitador'] ?? '');
 
 // === VALIDACIONES BÁSICAS ===
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -79,6 +80,13 @@ if (strlen($password) < 8) {
     header("Location: register.php"); exit;
 }
 
+
+
+if ($rol === 'coach' && empty($facilitador)) {
+    $_SESSION['error'] = "El campo Facilitador es obligatorio para registrarte como Coach.";
+    header("Location: register.php");
+    exit;
+}
 // === CAMPOS OBLIGATORIOS PARA AMBOS ROLES (Coach y Participante) ===
 $camposObligatorios = [
     'Nombre' => $nombre,
@@ -137,40 +145,70 @@ try {
         $seleccionCouch = null; // Coach no tiene coach → NULL
     }
 
-    // === INSERTAR USUARIO ===
-    $hashed = $password;
-    $stmt = $pdo->prepare("
-        INSERT INTO usuarios (
-            email, contrasena, nombre, apellido_paterno, apellido_materno,
-            fecha_nacimiento, genero, pais, telefono, id_herbalife,
-            seleccion_couch, rol
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )
-    ");
-    $stmt->execute([
-        $email,
-        $hashed,
-        $nombre,
-        $apellidoP,
-        $apellidoM ?: null,
-        $fechaNacimiento,
-        $genero,
-        $pais,
-        $telefono,
-        !empty($idHerbalife) ? $idHerbalife : null,
-        $seleccionCouch,
-        $rol
-    ]);
+$coach_id = null;
 
-    $user_id = $pdo->lastInsertId();
+if ($rol === 'user' && !empty($seleccionCouch)) {
+    try {
+        $stmt_find_coach = $pdo->prepare("
+            SELECT user_id 
+            FROM coaches 
+            WHERE TRIM(name) = TRIM(:coach_name)
+            LIMIT 1
+        ");
+        $stmt_find_coach->execute([':coach_name' => $seleccionCouch]);
+        $coach_data = $stmt_find_coach->fetch(PDO::FETCH_ASSOC);
 
-    // === SI ES COACH → AGREGAR A TABLA coaches ===
-    if ($rol === 'coach') {
-        $coach_name = trim("$nombre $apellidoP " . ($apellidoM ?: ''));
-        $stmt = $pdo->prepare("INSERT IGNORE INTO coaches (name, user_id) VALUES (?, ?)");
-        $stmt->execute([$coach_name, $user_id]);
+        if ($coach_data) {
+            $coach_id = (int)$coach_data['user_id'];
+        } else {
+            throw new Exception("El coach seleccionado ('" . htmlspecialchars($seleccionCouch) . "') no existe en la base de datos. Por favor selecciona uno válido.");
+        }
+    } catch (PDOException $e) {
+        throw new Exception("Error al validar el coach: " . $e->getMessage());
     }
+}
+
+// === INSERTAR USUARIO ===
+$stmt = $pdo->prepare("
+    INSERT INTO usuarios (
+        email, contrasena, nombre, apellido_paterno, apellido_materno,
+        fecha_nacimiento, genero, pais, telefono, id_herbalife,
+        seleccion_couch, rol, facilitador, coach_id
+    ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+");
+
+$stmt->execute([
+    $email,
+    $password,                                 
+    $nombre,
+    $apellidoP,
+    $apellidoM ?: null,
+    $fechaNacimiento,
+    $genero,
+    $pais,
+    $telefono,
+    !empty($idHerbalife) ? $idHerbalife : null,
+    $seleccionCouch,                           
+    $rol,
+    ($rol === 'coach') ? $facilitador : null,
+    $coach_id                                 
+]);
+
+$user_id = $pdo->lastInsertId();
+
+
+if ($rol === 'coach') {
+    $coach_name = trim($nombre . ' ' . $apellidoP . ' ' . ($apellidoM ?: ''));
+    // Evitar duplicados y mantener consistencia
+    $stmt_coach = $pdo->prepare("
+        INSERT INTO coaches (name, user_id, created_at)
+        VALUES (?, ?, NOW())
+        ON DUPLICATE KEY UPDATE name = VALUES(name)
+    ");
+    $stmt_coach->execute([$coach_name, $user_id]);
+}
 
     $pdo->commit();
 

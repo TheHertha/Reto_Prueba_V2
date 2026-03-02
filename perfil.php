@@ -13,12 +13,11 @@ if (!isset($_SESSION['csrf_token'])) {
 }
 $csrf_token = $_SESSION['csrf_token'];
 
-// Hardcoded lists for facilitador and presidente
+
 $facilitadores = ['Alex', 'Adriana', 'Esmeralda', 'Fide', 'Fernando','Francisco', 'Juan', 'Oscar', 'No asignado','No aplica'];
 $presidentes = ['Juan Pérez', 'Sofía Martínez', 'Luis Fernández', 'No asignado'];
 
 try {
-    // Fetch user data including seleccion_couch, facilitador, and presidente
     $stmt = $pdo->prepare("SELECT nombre, apellido_paterno, email, rol, fecha_nacimiento, foto_perfil, contrasena, seleccion_couch, facilitador, presidente FROM usuarios WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
@@ -38,30 +37,123 @@ try {
     exit;
 }
 
+// Siempre inicializar como array vacío (evita undefined y fatal error)
+$coaches_disponibles = [];
+
+// Solo cargar si el rol lo permite
+if (in_array($user['rol'], ['user', 'coach', 'admin', 'facilitador_admin'])) {
+    try {
+        $stmt_coaches = $pdo->query("
+            SELECT DISTINCT TRIM(name) AS name_clean 
+            FROM coaches 
+            WHERE name IS NOT NULL 
+              AND TRIM(name) != ''
+            ORDER BY name_clean ASC
+        ");
+        $coaches_disponibles = $stmt_coaches->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+        error_log("perfil.php - Error al cargar coaches: " . $e->getMessage());
+        // No romper la página, dejamos el array vacío
+    }
+}
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $submitted_token = $_POST['csrf_token'] ?? 'unset';
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        $_SESSION['error'] = "Error de seguridad. Intenta de nuevo.";
+        $_SESSION['error'] = "Error de seguridad (CSRF inválido).";
         header("Location: perfil.php");
         exit;
     }
 
-    // Handle photo upload
-    if (isset($_FILES['foto_perfil']) && $_FILES['foto_perfil']['error'] == 0) {
-        $imagen = subirImagen($_FILES['foto_perfil'], 'user_' . $_SESSION['user_id'] . '_');
-        if ($imagen !== false) {
-            try {
-                $stmt = $pdo->prepare("UPDATE usuarios SET foto_perfil = ? WHERE id = ?");
-                $stmt->execute([$imagen, $_SESSION['user_id']]);
-                $user['foto_perfil'] = $imagen;
-                $_SESSION['success'] = "Foto de perfil actualizada exitosamente.";
-            } catch (PDOException $e) {
-                $_SESSION['error'] = "Error al actualizar la foto: " . $e->getMessage();
+       // Manejo del cambio de coach
+    if (isset($_POST['nuevo_coach'])) {
+        $nuevo_coach_raw = $_POST['nuevo_coach'] ?? '';
+        $nuevo_coach = trim($nuevo_coach_raw);
+
+        // Debug inicial
+        error_log("DEBUG CAMBIO COACH - POST recibido | raw: '$nuevo_coach_raw' | trimmed: '$nuevo_coach' | user_id: " . $_SESSION['user_id']);
+
+        $coach_id = null;
+        $nombre_coach = null;
+        $success_message = null;
+        $error_message = null;
+
+        if ($nuevo_coach !== '' && $nuevo_coach !== 'Ninguno') {
+            // Buscar el coach por nombre exacto (TRIM para tolerar espacios del select)
+            $stmt_check = $pdo->prepare("
+                SELECT user_id, name 
+                FROM coaches 
+                WHERE TRIM(name) = TRIM(:name_check) 
+                LIMIT 1
+            ");
+            $stmt_check->execute(['name_check' => $nuevo_coach]);
+            $coach_row = $stmt_check->fetch(PDO::FETCH_ASSOC);
+
+            if ($coach_row) {
+                $coach_id     = (int) $coach_row['user_id'];
+                $nombre_coach = $coach_row['name'];  // nombre oficial desde la tabla coaches
+
+                error_log("DEBUG CAMBIO COACH - Coach encontrado | user_id: $coach_id | name: '$nombre_coach'");
+            } else {
+                $error_message = "El coach '$nuevo_coach' no se encontró en la base de datos.";
+                error_log("ERROR CAMBIO COACH - No encontrado: '$nuevo_coach'");
             }
         } else {
-            $_SESSION['error'] = "Error al subir la imagen. Verifica el formato (JPG, PNG, GIF) y tamaño (<5MB).";
+            // Caso "Ninguno" o vacío → quitar asignación
+            $success_message = "Coach removido correctamente.";
+            error_log("DEBUG CAMBIO COACH - Removiendo coach (Ninguno o vacío)");
         }
+
+        // Proceder solo si hay decisión clara (asignar o quitar)
+        if ($coach_id !== null || $nombre_coach === null) {
+            try {
+                $stmt_update = $pdo->prepare("
+                    UPDATE usuarios 
+                    SET 
+                        coach_id       = :coach_id,
+                        seleccion_couch = :seleccion_couch
+                    WHERE id = :user_id
+                ");
+                $stmt_update->execute([
+                    'coach_id'       => $coach_id,          // NULL si se quita
+                    'seleccion_couch' => $nombre_coach,     // NULL si se quita
+                    'user_id'        => $_SESSION['user_id']
+                ]);
+
+                $filas = $stmt_update->rowCount();
+
+                // Recargar datos del usuario para reflejar cambio inmediato en la página
+                if ($filas > 0) {
+                    $stmt_reload = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+                    $stmt_reload->execute([$_SESSION['user_id']]);
+                    $user = $stmt_reload->fetch(PDO::FETCH_ASSOC);
+                }
+
+                // Mensaje de éxito
+                $success_message = $coach_id 
+                    ? "Coach cambiado correctamente a: " . htmlspecialchars($nombre_coach)
+                    : "Coach removido correctamente.";
+
+                $_SESSION['success'] = $success_message;
+                error_log("DEBUG CAMBIO COACH - Guardado OK | coach_id=$coach_id | seleccion_couch='$nombre_coach' | filas=$filas");
+
+            } catch (PDOException $e) {
+                $error_message = "Error al guardar la asignación del coach.";
+                $_SESSION['error'] = $error_message;
+                error_log("ERROR CAMBIO COACH - Excepción PDO: " . $e->getMessage());
+            }
+        } else if ($error_message) {
+            $_SESSION['error'] = $error_message;
+        }
+
+        // Refrescar CSRF y redirigir
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        header("Location: perfil.php");
+        exit;
     }
+
+
 
     // Handle facilitador update
     if (isset($_POST['facilitador'])) {
@@ -93,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header("Location: perfil.php");
     exit;
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -688,48 +781,191 @@ body {
         <?php endif; ?>
     </div>
 
-    <div class="main-content">
-        <div class="team-section">
-            <div class="team-member">
-                <div class="team-avatar">🏋️</div>
-                <div class="team-role">Mi Coach</div>
-                <div class="team-name"><?php echo htmlspecialchars($user['seleccion_couch'] ?: 'No asignado'); ?></div>
-            </div>
+   <div class="main-content">
+    <div class="team-section">
+       <!-- Tarjeta Mi Coach -->
+<div class="team-member">
+    <div class="team-avatar">🏋️</div>
+    <div class="team-role">Mi Coach</div>
+    <div class="team-name">
+        <?php echo htmlspecialchars($user['seleccion_couch'] ?: 'No asignado'); ?>
+    </div>
 
-            <div class="team-member">
-                <div class="team-avatar">🧠</div>
-                <div class="team-role">Mi Facilitador</div>
-                <div class="team-name"><?php echo htmlspecialchars($user['facilitador'] ?: 'No asignado'); ?></div>
-                <form method="POST" class="team-form">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                    <select name="facilitador" onchange="this.form.submit()" aria-label="Seleccionar Facilitador">
-                        <?php foreach ($facilitadores as $fac): ?>
-                            <option value="<?php echo htmlspecialchars($fac); ?>" <?php echo $user['facilitador'] === $fac || (!$user['facilitador'] && $fac === 'No asignado') ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($fac); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </form>
+    <?php if (in_array($user['rol'], ['user', 'coach', 'admin', 'facilitador_admin'])): ?>
+        <?php if (!empty($coaches_disponibles)): ?>
+            <form method="POST" class="team-form" style="margin-top: 20px;">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                <select name="nuevo_coach" onchange="this.form.submit()" aria-label="Cambiar mi coach">
+                    <option value="">-- Cambiar coach --</option>
+                    <?php foreach ($coaches_disponibles as $coach_name): ?>
+                        <option value="<?php echo htmlspecialchars($coach_name); ?>"
+                            <?php echo ($user['seleccion_couch'] ?? '') === $coach_name ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($coach_name); ?>
+                        </option>
+                    <?php endforeach; ?>
+                    <option value="Ninguno" <?php echo empty($user['seleccion_couch']) ? 'selected' : ''; ?>>
+                        Ninguno
+                    </option>
+                </select>
+            </form>
+        <?php else: ?>
+            <div style="margin-top: 15px; color: #888; font-style: italic; font-size: 0.9rem; text-align: center;">
+                No hay coaches disponibles en este momento
             </div>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
 
-            <div class="team-member">
-                <div class="team-avatar">👑</div>
-                <div class="team-role">Mi Presidente</div>
-                <div class="team-name"><?php echo htmlspecialchars($user['presidente'] ?: 'No asignado'); ?></div>
-                <form method="POST" class="team-form">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                    <select name="presidente" onchange="this.form.submit()" aria-label="Seleccionar Presidente">
-                        <?php foreach ($presidentes as $pres): ?>
-                            <option value="<?php echo htmlspecialchars($pres); ?>" <?php echo $user['presidente'] === $pres || (!$user['presidente'] && $pres === 'No asignado') ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($pres); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </form>
-            </div>
+        <!-- Facilitador -->
+        <div class="team-member">
+            <div class="team-avatar">🧠</div>
+            <div class="team-role">Mi Facilitador</div>
+            <div class="team-name"><?php echo htmlspecialchars($user['facilitador'] ?: 'No asignado'); ?></div>
+            <form method="POST" class="team-form">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                <select name="facilitador" onchange="this.form.submit()" aria-label="Seleccionar Facilitador">
+                    <?php foreach ($facilitadores as $fac): ?>
+                        <option value="<?php echo htmlspecialchars($fac); ?>" 
+                            <?php echo ($user['facilitador'] ?? '') === $fac || 
+                                        (empty($user['facilitador']) && $fac === 'No asignado') ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($fac); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+        </div>
+
+        <!-- Presidente -->
+        <div class="team-member">
+            <div class="team-avatar">👑</div>
+            <div class="team-role">Mi Presidente</div>
+            <div class="team-name"><?php echo htmlspecialchars($user['presidente'] ?: 'No asignado'); ?></div>
+            <form method="POST" class="team-form">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                <select name="presidente" onchange="this.form.submit()" aria-label="Seleccionar Presidente">
+                    <?php foreach ($presidentes as $pres): ?>
+                        <option value="<?php echo htmlspecialchars($pres); ?>" 
+                            <?php echo ($user['presidente'] ?? '') === $pres || 
+                                        (empty($user['presidente']) && $pres === 'No asignado') ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($pres); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
         </div>
     </div>
 </div>
+</div>
+
+<?php if ($user['rol'] === 'coach'): ?>
+
+    <?php
+    $participantes = [];
+    $ultimos_pesajes = [];
+
+    try {
+        // ────────────────────────────────────────────────
+        // Nueva consulta: usamos coach_id en lugar de nombre
+        // ────────────────────────────────────────────────
+        $stmt_part = $pdo->prepare("
+            SELECT 
+                id, nombre, apellido_paterno, apellido_materno, email
+            FROM usuarios 
+            WHERE coach_id = :coach_id
+              AND rol IN ('user', 'coach', 'facilitador_admin', 'admin')
+              AND id != :self_id
+            ORDER BY apellido_paterno ASC, nombre ASC
+        ");
+        $stmt_part->execute([
+            'coach_id' => $_SESSION['user_id'],   // ← ¡El ID del coach actual!
+            'self_id'  => $_SESSION['user_id']
+        ]);
+        $participantes = $stmt_part->fetchAll(PDO::FETCH_ASSOC);
+
+    
+
+        // Cargar últimos pesajes (sin cambios aquí)
+        if (!empty($participantes)) {
+            $participant_ids = array_column($participantes, 'id');
+            $placeholders = implode(',', array_fill(0, count($participant_ids), '?'));
+
+            $stmt_pesaje = $pdo->prepare("
+                SELECT 
+                    ds.usuario_id,
+                    ds.semana,
+                    ds.peso,
+                    ds.grasa,
+                    ds.musculo,
+                    ds.created_at,
+                    ds.image
+                FROM datos_semanales ds
+                INNER JOIN (
+                    SELECT usuario_id, MAX(created_at) AS max_created
+                    FROM datos_semanales
+                    WHERE usuario_id IN ($placeholders)
+                    GROUP BY usuario_id
+                ) latest ON ds.usuario_id = latest.usuario_id 
+                         AND ds.created_at = latest.max_created
+                ORDER BY ds.usuario_id
+            ");
+            $stmt_pesaje->execute($participant_ids);
+            $pesajes_raw = $stmt_pesaje->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($pesajes_raw as $p) {
+                $ultimos_pesajes[$p['usuario_id']] = $p;
+            }
+        }
+    } catch (PDOException $e) {
+    }
+    ?>
+
+    <div class="team-section" style="margin-top: 60px;">
+        <h2 style="text-align: center; margin-bottom: 30px; font-size: 1.6rem; letter-spacing: 2px; color: #000;">
+            Progreso de mis participantes
+        </h2>
+
+        <?php if (empty($participantes)): ?>
+            <div class="info-section" style="text-align: center; padding: 40px; background: #f8f8f8; border: 1px dashed #ccc;">
+                <p style="font-size: 1.1rem; color: #555;">
+                    Aún no tienes participantes asignados.<br>
+                    Cuando alguien te seleccione como coach, aparecerán aquí.
+                </p>
+            </div>
+        <?php else: ?>
+            <?php foreach ($participantes as $part): 
+                $nombre_part = trim($part['nombre'] . ' ' . $part['apellido_paterno'] . ' ' . ($part['apellido_materno'] ?? ''));
+                $pesaje = $ultimos_pesajes[$part['id']] ?? null;
+            ?>
+                <div class="team-member" style="position: relative;">
+                    <div class="team-avatar">📈</div>
+                    <div class="team-role">Participante</div>
+                    <div class="team-name"><?php echo htmlspecialchars($nombre_part); ?></div>
+
+                    <?php if ($pesaje): ?>
+                        <div style="margin-top: 15px; font-size: 0.95rem; color: #333; text-align: left; padding: 0 15px;">
+                            <div><strong>Semana:</strong> <?php echo $pesaje['semana']; ?></div>
+                            <div><strong>Fecha:</strong> <?php echo date('d/m/Y H:i', strtotime($pesaje['created_at'])); ?></div>
+                            <div><strong>Peso:</strong> <?php echo number_format($pesaje['peso'], 1); ?> kg</div>
+                            <div><strong>Grasa:</strong> <?php echo number_format($pesaje['grasa'], 1); ?> %</div>
+                            <div><strong>Músculo:</strong> <?php echo number_format($pesaje['musculo'], 1); ?> kg</div>
+                            <?php if (!empty($pesaje['image'])): ?>
+                                <div style="margin-top: 10px;">
+                                    <a href="Uploads/<?php echo htmlspecialchars($pesaje['image']); ?>" target="_blank" style="color: #000; text-decoration: underline;">
+                                        Ver foto del pesaje
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <div style="margin-top: 15px; color: #888; font-style: italic; text-align: center;">
+                            Aún no ha registrado pesajes
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
 
 <div class="footer-nav">
     <a href="inicio.php">Volver al Inicio</a>

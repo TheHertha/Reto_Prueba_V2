@@ -226,6 +226,31 @@ unset($_SESSION['error'], $_SESSION['success']);
             <label for="telefono">Número de Teléfono</label>
             <input type="tel" id="telefono" name="telefono" pattern="[0-9]{10,15}" placeholder="1234567890" required>
           </div>
+          
+      <!-- Solo visible para coaches -->
+<div class="form-group" id="facilitadorGroup" style="display:none;">
+    <label for="facilitador">Facilitador <span style="color:red;">*</span></label>
+    <select 
+        id="facilitador" 
+        name="facilitador" 
+        required
+    >
+        <option value="">Seleccione un facilitador</option>
+        <option value="Alex">Alex</option>
+        <option value="Adriana">Adriana</option>
+        <option value="Esmeralda">Esmeralda</option>
+        <option value="Fide">Fide</option>
+        <option value="Fernando">Fernando</option>
+        <option value="Francisco">Francisco</option>
+        <option value="Juan">Juan</option>
+        <option value="Oscar">Oscar</option>
+        <option value="No asignado">No asignado</option>
+        <option value="No aplica">No aplica</option>
+    </select>
+    <small id="facilitadorHelp" style="color:#666; display:block; margin-top:6px;">
+        Obligatorio para registrarte como Coach
+    </small>
+</div>
           <div class="form-group">
             <label for="idHerbalife">ID de Herbalife <small>(opcional)</small></label>
             <input type="text" id="idHerbalife" name="idHerbalife" oninput="checkIdHerbalife()">
@@ -366,10 +391,24 @@ function updateCoachVisibility() {
         hidden.setAttribute('required', 'required');
         submitBtn.textContent = 'Crear Cuenta como Retador';
     }
+
+    const facilitadorGroup = document.getElementById('facilitadorGroup');
+    const facilitadorSelect = document.getElementById('facilitador');
+
+    if (selectedRol === 'coach') {
+        facilitadorGroup.style.display = 'block';
+        facilitadorSelect.setAttribute('required', 'required');
+        // Opcional: resetear selección al mostrar
+        facilitadorSelect.value = '';
+    } else {
+        facilitadorGroup.style.display = 'none';
+        facilitadorSelect.removeAttribute('required');
+        facilitadorSelect.value = '';  // limpiar selección
+    }
 }
 
-// ...existing code...
-// Toggle password visibility
+
+
 const togglePassword = document.getElementById('togglePassword');
 const passwordInput = document.getElementById('password');
 const eyeOpen = document.getElementById('eyeOpen');
@@ -384,9 +423,8 @@ if (togglePassword && passwordInput && eyeOpen && eyeClosed) {
     eyeClosed.style.display = isHidden ? 'none' : 'inline';
   });
 }
-// ...existing code...
+
 { updateProgress(); updateCoachVisibility(); }
-// ...existing code...
 
 function updateProgress() {
     const progress = (currentStep / totalSteps) * 100;

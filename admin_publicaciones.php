@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config.php';
+require_once 'config.php'; 
 
 $pdo->exec("SET time_zone = '-06:00'");
 
@@ -17,19 +17,152 @@ if (!isset($_SESSION['csrf_token'])) {
 }
 $csrf_token = $_SESSION['csrf_token'];
 
-// Procesar POST (AJAX)
+// ────────────────────────────────────────────────
+//          PROCESAMIENTO DE PETICIONES POST (AJAX)
+// ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
-    
+
+    // Verificación CSRF (obligatoria para todas las acciones POST)
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $csrf_token) {
-        echo json_encode(['error' => true, 'message' => 'Error de seguridad.']);
+        echo json_encode(['error' => true, 'message' => 'Error de seguridad (CSRF inválido).']);
         exit;
     }
 
-    // Crear nueva publicación
+    // ──── 1. EDITAR publicación ──── (primero porque es la más específica)
+    if (isset($_POST['edit_publicacion'])) {
+        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+        if ($id === false || $id <= 0) {
+            echo json_encode(['error' => true, 'message' => 'ID de publicación inválido.']);
+            exit;
+        }
+
+        $contenido = trim($_POST['contenido'] ?? '');
+        if (empty($contenido)) {
+            echo json_encode(['error' => true, 'message' => 'El contenido es obligatorio.']);
+            exit;
+        }
+
+        // Obtener datos actuales
+        $stmt = $pdo->prepare("SELECT imagen, media_tipo, media_url FROM publicaciones WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $current = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$current) {
+            echo json_encode(['error' => true, 'message' => 'Publicación no encontrada.']);
+            exit;
+        }
+
+        $media      = $current['imagen'] ?? $current['media_url'] ?? null;
+        $media_tipo = $current['media_tipo'] ?? 'none';
+
+        // Procesar nueva media (si se subió)
+        if (isset($_FILES['media']) && $_FILES['media']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['media'];
+            $mime = mime_content_type($file['tmp_name']);
+            $size_limit = 50 * 1024 * 1024; // 50 MB
+
+            if ($file['size'] > $size_limit) {
+                echo json_encode(['error' => true, 'message' => 'Archivo demasiado grande (máx 50MB).']);
+                exit;
+            }
+
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $nombre_archivo = 'media_' . time() . '_' . uniqid() . '.' . $ext;
+            $ruta_nueva = 'Uploads/' . $nombre_archivo;
+
+            if (!move_uploaded_file($file['tmp_name'], $ruta_nueva)) {
+                echo json_encode(['error' => true, 'message' => 'Error al mover el nuevo archivo.']);
+                exit;
+            }
+
+            if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'])) {
+                $media_tipo = 'image';
+            } elseif (in_array($mime, ['video/mp4', 'video/webm'])) {
+                $media_tipo = 'video';
+            } else {
+                @unlink($ruta_nueva);
+                echo json_encode(['error' => true, 'message' => 'Formato de archivo no soportado.']);
+                exit;
+            }
+
+            // Borrar media antigua si existía
+            if ($media && file_exists($media)) {
+                @unlink($media);
+            }
+
+            $media = $ruta_nueva;
+        }
+
+        // Actualizar registro
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE publicaciones 
+                SET contenido   = :contenido,
+                    imagen      = :imagen,
+                    media_tipo  = :media_tipo,
+                    media_url   = :media_url,
+                    fecha       = NOW()           -- quítalo si quieres conservar la fecha original
+                WHERE id = :id
+            ");
+            $stmt->execute([
+                ':contenido'   => $contenido,
+                ':imagen'      => ($media_tipo === 'image' ? $media : null),
+                ':media_tipo'  => $media_tipo,
+                ':media_url'   => ($media_tipo === 'video' ? $media : null),
+                ':id'          => $id
+            ]);
+
+            echo json_encode([
+                'success'   => true,
+                'message'   => 'Publicación actualizada correctamente.',
+                'contenido' => htmlspecialchars($contenido)
+            ]);
+        } catch (PDOException $e) {
+            // Rollback: borrar archivo nuevo si se subió
+            if (isset($ruta_nueva) && file_exists($ruta_nueva)) {
+                @unlink($ruta_nueva);
+            }
+            echo json_encode(['error' => true, 'message' => 'Error al actualizar: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // ──── 2. ELIMINAR publicación ────
+    if (isset($_POST['delete_publicacion'])) {
+        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+        if ($id === false || $id <= 0) {
+            echo json_encode(['error' => true, 'message' => 'ID de publicación inválido.']);
+            exit;
+        }
+
+        try {
+            $stmt = $pdo->prepare("SELECT imagen FROM publicaciones WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+            $pub = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$pub) {
+                echo json_encode(['error' => true, 'message' => 'Publicación no encontrada.']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("DELETE FROM publicaciones WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+
+            if ($pub['imagen'] && file_exists($pub['imagen'])) {
+                @unlink($pub['imagen']);
+            }
+
+            echo json_encode(['success' => true, 'message' => 'Publicación eliminada correctamente.']);
+        } catch (PDOException $e) {
+            echo json_encode(['error' => true, 'message' => 'Error al eliminar: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // ──── 3. CREAR publicación ──── (solo si se envía explícitamente el campo)
     if (isset($_POST['create_publicacion'])) {
         $contenido = trim($_POST['contenido'] ?? '');
-        
         if (empty($contenido)) {
             echo json_encode(['error' => true, 'message' => 'El contenido es obligatorio.']);
             exit;
@@ -41,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_FILES['media']) && $_FILES['media']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['media'];
             $mime = mime_content_type($file['tmp_name']);
-            $size_limit = 50 * 1024 * 1024; // 50MB para videos
+            $size_limit = 50 * 1024 * 1024;
 
             if ($file['size'] > $size_limit) {
                 echo json_encode(['error' => true, 'message' => 'Archivo demasiado grande (máx 50MB).']);
@@ -53,101 +186,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ruta = 'Uploads/' . $nombre_archivo;
 
             if (!move_uploaded_file($file['tmp_name'], $ruta)) {
-                echo json_encode(['error' => true, 'message' => 'Error al subir el archivo.']);
+                echo json_encode(['error' => true, 'message' => 'Error al mover el archivo.']);
                 exit;
             }
 
             $media = $ruta;
 
-            // Detectar tipo
             if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'])) {
                 $media_tipo = 'image';
             } elseif (in_array($mime, ['video/mp4', 'video/webm'])) {
                 $media_tipo = 'video';
             } else {
-                unlink($ruta); // borra si no es válido
+                @unlink($ruta);
                 echo json_encode(['error' => true, 'message' => 'Formato no soportado.']);
                 exit;
             }
         }
 
-        // Insertar
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO publicaciones (contenido, imagen, media_tipo, media_url, fecha, activo, creado_por)
+                INSERT INTO publicaciones 
+                (contenido, imagen, media_tipo, media_url, fecha, activo, creado_por)
                 VALUES (:contenido, :imagen, :media_tipo, :media_url, NOW(), 1, :creado_por)
             ");
             $stmt->execute([
-                'contenido'   => $contenido,
-                'imagen'      => ($media_tipo === 'image' ? $media : null),
-                'media_tipo'  => $media_tipo,
-                'media_url'   => ($media_tipo === 'video' ? $media : null),
-                'creado_por'  => $_SESSION['nombre'] . ' (admin)'
+                ':contenido'   => $contenido,
+                ':imagen'      => ($media_tipo === 'image' ? $media : null),
+                ':media_tipo'  => $media_tipo,
+                ':media_url'   => ($media_tipo === 'video' ? $media : null),
+                ':creado_por'  => ($_SESSION['nombre'] ?? 'Admin') . ' (admin)'
             ]);
-            
+
             echo json_encode(['success' => true, 'message' => 'Publicación creada correctamente.']);
-            exit;
         } catch (PDOException $e) {
             echo json_encode(['error' => true, 'message' => 'Error al guardar: ' . $e->getMessage()]);
-            exit;
         }
-    }
-
-    // Eliminar publicación
-    if (isset($_POST['delete_publicacion'])) {
-        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-        if (!$id) {
-            echo json_encode(['error' => true, 'message' => 'ID inválido.']);
-            exit;
-        }
-
-        // Obtener la imagen antes de borrar
-        $stmt = $pdo->prepare("SELECT imagen, media_url FROM publicaciones WHERE id = :id");
-        $stmt->execute(['id' => $id]);
-        $pub = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$pub) {
-            echo json_encode(['error' => true, 'message' => 'Publicación no encontrada.']);
-            exit;
-        }
-
-        // Borrar registro
-        $stmt = $pdo->prepare("DELETE FROM publicaciones WHERE id = :id");
-        $stmt->execute(['id' => $id]);
-
-        // Borrar imagen física si existe
-        if ($pub['imagen'] && file_exists($pub['imagen'])) {
-            @unlink($pub['imagen']);
-        }
-        
-        // Borrar video físico si existe
-        if ($pub['media_url'] && file_exists($pub['media_url'])) {
-            @unlink($pub['media_url']);
-        }
-
-        echo json_encode(['success' => true, 'message' => 'Publicación eliminada correctamente.']);
         exit;
     }
 
-    // Si se implementa edición en el futuro, aquí iría el código
-    if (isset($_POST['edit_publicacion'])) {
-        echo json_encode(['error' => true, 'message' => 'Edición no implementada aún.']);
-        exit;
-    }
-
-    // Acción no reconocida
-    echo json_encode(['error' => true, 'message' => 'Acción inválida.']);
+    // Fallback: acción no reconocida
+    echo json_encode(['error' => true, 'message' => 'Acción no válida o no reconocida.']);
     exit;
 }
 
-// Cargar publicaciones existentes (sin JOIN)
-$stmt = $pdo->prepare("
-    SELECT id, contenido, imagen, fecha
-    FROM publicaciones
-    ORDER BY fecha DESC
-");
-$stmt->execute();
-$publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// ────────────────────────────────────────────────
+//          CARGA DE DATOS PARA MOSTRAR (GET)
+// ────────────────────────────────────────────────
+try {
+    $stmt = $pdo->prepare("
+        SELECT id, contenido, imagen, media_tipo, media_url, fecha
+        FROM publicaciones
+        ORDER BY fecha DESC
+    ");
+    $stmt->execute();
+    $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $publicaciones = [];
+    // Opcional: $_SESSION['error'] = "Error al cargar publicaciones.";
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -194,6 +291,18 @@ $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .data-table tr:hover { background: #f8f8f8; }
         .preview-img { max-width: 80px; height: auto; border-radius: 4px; }
         .content-short { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .btn-edit {
+    background: #1976d2;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    margin-right: 8px;
+}
+.btn-edit:hover {
+    background: #1565c0;
+}
     </style>
 </head>
 <body>
@@ -227,8 +336,10 @@ $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <?php unset($_SESSION['success']); ?>
                 <?php endif; ?>
 
-          
-               <div class="form-card">
+
+
+
+            <div class="form-card">
     <h2>Crear Nueva Publicación</h2>
     <form id="create-pub-form" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -251,7 +362,41 @@ $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </form>
 </div>
 
-           
+
+<div id="editModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;">
+    <div class="form-card" style="width:90%; max-width:600px; position:relative;">
+        <button id="closeModal" style="position:absolute; top:10px; right:15px; font-size:24px; background:none; border:none; cursor:pointer;">×</button>
+        <h2>Editar Publicación</h2>
+    <form id="edit-pub-form" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+    <input type="hidden" name="edit_publicacion" value="1">
+    <input type="hidden" name="id" id="edit-id">
+    
+    <div class="form-group">
+        <label for="edit-contenido">Contenido</label>
+        <textarea id="edit-contenido" name="contenido" required style="min-height:160px;"></textarea>
+    </div>
+    
+    <div class="form-group">
+        <label>Media actual</label>
+        <div id="current-media-preview" style="margin:10px 0;"></div>
+    </div>
+    
+    <div class="form-group">
+        <label for="edit-media">Cambiar imagen o video (opcional)</label>
+        <input type="file" id="edit-media" name="media" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm">
+        <small>Deja en blanco para mantener la actual. Máx 50MB para videos.</small>
+    </div>
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-submit">Guardar Cambios</button>
+        <button type="button" id="cancelEdit" class="btn" style="background:#666; color:white;">Cancelar</button>
+    </div>
+</form>
+    </div>
+</div>
+
+
                 <div class="publicaciones-section">
                     <h2>Publicaciones Existentes</h2>
                     <table class="data-table">
@@ -266,28 +411,36 @@ $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </thead>
                         <tbody id="pubs-table">
                             <?php foreach ($publicaciones as $pub): ?>
-                                <tr data-pub-id="<?= $pub['id'] ?>">
-                                    <td><?= $pub['id'] ?></td>
-                                    <td><?= date('d/m/Y H:i', strtotime($pub['fecha'])) ?></td>
-                                    <td class="content-short">
-                                        <?= htmlspecialchars(substr($pub['contenido'], 0, 100)) ?>...
-                                    </td>
-                                    <td>
-                                        <?php if ($pub['imagen']): ?>
-                                            <img src="<?= htmlspecialchars($pub['imagen']) ?>" alt="Preview" class="preview-img">
-                                        <?php else: ?>
-                                            Sin imagen
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-delete delete-pub" 
-                                                data-id="<?= $pub['id'] ?>" 
-                                                data-contenido="<?= htmlspecialchars(substr($pub['contenido'], 0, 50)) ?>">
-                                            Eliminar
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
+    <tr data-pub-id="<?= $pub['id'] ?>">
+        <td><?= $pub['id'] ?></td>
+        <td><?= date('d/m/Y H:i', strtotime($pub['fecha'])) ?></td>
+        <td class="content-short">
+            <?= htmlspecialchars(substr($pub['contenido'], 0, 100)) ?>...
+        </td>
+        <td>
+            <?php if ($pub['imagen']): ?>
+                <img src="<?= htmlspecialchars($pub['imagen']) ?>" alt="Preview" class="preview-img">
+            <?php else: ?>
+                Sin imagen
+            <?php endif; ?>
+        </td>
+        <td>
+            <button class="btn btn-delete delete-pub" 
+                    data-id="<?= $pub['id'] ?>" 
+                    data-contenido="<?= htmlspecialchars(substr($pub['contenido'], 0, 50)) ?>">
+                Eliminar
+            </button>
+
+            <button class="btn btn-edit edit-pub" 
+                    data-id="<?= $pub['id'] ?>" 
+                    data-contenido="<?= htmlspecialchars($pub['contenido']) ?>"
+                    data-media="<?= htmlspecialchars($pub['imagen'] ?? $pub['media_url'] ?? '') ?>"
+                    data-media-tipo="<?= htmlspecialchars($pub['media_tipo'] ?? 'none') ?>">
+                Editar
+            </button>
+        </td>
+    </tr>
+<?php endforeach; ?>
                             <?php if (empty($publicaciones)): ?>
                                 <tr><td colspan="5">No hay publicaciones aún.</td></tr>
                             <?php endif; ?>
@@ -363,6 +516,76 @@ $publicaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
             });
         });
+
+
+        // Abrir modal de edición
+document.querySelectorAll('.edit-pub').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const contenido = btn.dataset.contenido;
+
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-contenido').value = contenido;
+
+       
+        // Para esto debes modificar la tabla: agregar data-media="<?= htmlspecialchars($pub['imagen'] ?? $pub['media_url'] ?? '') ?>"
+        // y data-media-tipo="<?= $pub['media_tipo'] ?? 'none' ?>"
+        
+        const mediaUrl = btn.dataset.media || '';  
+        const mediaTipo = btn.dataset.mediaTipo || 'none';
+        const previewDiv = document.getElementById('current-media-preview');
+        previewDiv.innerHTML = '';
+
+        if (mediaUrl) {
+            if (mediaTipo === 'image') {
+                previewDiv.innerHTML = `<img src="${mediaUrl}" alt="Media actual" style="max-width:200px; border-radius:6px;">`;
+            } else if (mediaTipo === 'video') {
+                previewDiv.innerHTML = `<video src="${mediaUrl}" controls style="max-width:300px; border-radius:6px;"></video>`;
+            } else {
+                previewDiv.innerHTML = `<p>Media actual: ${mediaUrl}</p>`;
+            }
+        } else {
+            previewDiv.innerHTML = '<p>Sin media actual</p>';
+        }
+
+        document.getElementById('editModal').style.display = 'flex';
+    });
+});
+
+document.getElementById('edit-pub-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const submitBtn = e.target.querySelector('.btn-submit');
+    const originalText = submitBtn.textContent;
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando...';
+
+    try {
+        const response = await fetch('', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(data.message || 'Publicación actualizada');
+            document.getElementById('editModal').style.display = 'none';
+            location.reload();           // ← refresca para ver cambios
+        } else {
+            alert(data.message || 'Error al guardar los cambios');
+        }
+    } catch (err) {
+        console.error('Error en fetch:', err);
+        alert('Error de conexión o servidor: ' + err.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
     </script>
 </body>
 </html>

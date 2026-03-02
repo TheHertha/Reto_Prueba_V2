@@ -79,8 +79,20 @@ try {
             }
 
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare("INSERT INTO retos (start_date, end_date) VALUES (:start_date, :end_date)");
-            $stmt->execute(['start_date' => $start_date, 'end_date' => $end_date]);
+            
+            // Calcular el siguiente numero_reto (ciclo 1-21) basado en el proximo ID
+            $stmt = $pdo->prepare("SELECT MAX(id) as max_id FROM retos");
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $next_id = (int)($result['max_id'] ?? 0) + 1;
+            if ($next_id <= 21) {
+                $next_numero = $next_id;
+            } else {
+                $next_numero = (($next_id - 22) % 21) + 1;
+            }
+            
+            $stmt = $pdo->prepare("INSERT INTO retos (numero_reto, start_date, end_date) VALUES (:numero_reto, :start_date, :end_date)");
+            $stmt->execute(['numero_reto' => $next_numero, 'start_date' => $start_date, 'end_date' => $end_date]);
             $new_reto_id = $pdo->lastInsertId();
 
             if (strtotime($start_date) <= time()) {
@@ -372,7 +384,7 @@ try {
     }
 
     // Fetch all retos and users
-    $stmt = $pdo->query("SELECT id, start_date, end_date FROM retos ORDER BY start_date DESC");
+    $stmt = $pdo->query("SELECT id, numero_reto, start_date, end_date FROM retos ORDER BY numero_reto ASC");
     $retos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $stmt = $pdo->prepare("
@@ -580,6 +592,7 @@ try {
                         <thead>
                             <tr>
                                 <th>ID</th>
+                                <th>Nº Reto</th>
                                 <th>Fecha Inicio</th>
                                 <th>Fecha Fin</th>
                             </tr>
@@ -588,13 +601,14 @@ try {
                             <?php foreach ($retos as $reto): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($reto['id']); ?></td>
+                                    <td><?php echo htmlspecialchars($reto['numero_reto']); ?></td>
                                     <td><?php echo date('d/m/Y', strtotime($reto['start_date'])); ?></td>
                                     <td><?php echo date('d/m/Y', strtotime($reto['end_date'])); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($retos)): ?>
                                 <tr>
-                                    <td colspan="3">No hay retos disponibles.</td>
+                                    <td colspan="4">No hay retos disponibles.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -686,7 +700,7 @@ try {
                                 <label for="reto_id_fotos">Reto</label>
                                 <select id="reto_id_fotos" name="reto_id" required>
                                     <?php foreach ($retos as $reto): ?>
-                                        <option value="<?php echo $reto['id']; ?>">Ret_CT_<?php echo $reto['id']; ?> (<?php echo date('d/m/Y', strtotime($reto['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($reto['end_date'])); ?>)</option>
+                                        <option value="<?php echo $reto['id']; ?>">Reto Nº<?php echo $reto['numero_reto']; ?> (ID: <?php echo $reto['id']; ?>) - <?php echo date('d/m/Y', strtotime($reto['start_date'])); ?> a <?php echo date('d/m/Y', strtotime($reto['end_date'])); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -730,7 +744,7 @@ try {
                                 <label for="reto_id_elite">Reto</label>
                                 <select id="reto_id_elite" name="reto_id" required>
                                     <?php foreach ($retos as $reto): ?>
-                                        <option value="<?php echo $reto['id']; ?>">Ret_CT_<?php echo $reto['id']; ?> (<?php echo date('d/m/Y', strtotime($reto['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($reto['end_date'])); ?>)</option>
+                                        <option value="<?php echo $reto['id']; ?>">Reto Nº<?php echo $reto['numero_reto']; ?> (ID: <?php echo $reto['id']; ?>) - <?php echo date('d/m/Y', strtotime($reto['start_date'])); ?> a <?php echo date('d/m/Y', strtotime($reto['end_date'])); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
