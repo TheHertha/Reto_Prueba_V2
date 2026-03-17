@@ -1432,4 +1432,40 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
         });
     </script>
 </body>
+</html>t.message || 'No se pudo eliminar el usuario'} <button class="alert-close">×</button>`;
+                        document.querySelector('.content').prepend(alert);
+                        alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                    }
+                } catch (error) {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-error';
+                    alert.innerHTML = `Error de conexión al intentar eliminar: ${error.message} <button class="alert-close">×</button>`;
+                    document.querySelector('.content').prepend(alert);
+                    alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                } finally {
+                    this.disabled = false;
+                    this.textContent = 'Eliminar';
+                }
+            });
+        });
+    </script>
+</body>
+</html>t.message || 'No se pudo eliminar el usuario'} <button class="alert-close">×</button>`;
+                        document.querySelector('.content').prepend(alert);
+                        alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                    }
+                } catch (error) {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-error';
+                    alert.innerHTML = `Error de conexión al intentar eliminar: ${error.message} <button class="alert-close">×</button>`;
+                    document.querySelector('.content').prepend(alert);
+                    alert.querySelector('.alert-close').addEventListener('click', () => alert.remove());
+                } finally {
+                    this.disabled = false;
+                    this.textContent = 'Eliminar';
+                }
+            });
+        });
+    </script>
+</body>
 </html>

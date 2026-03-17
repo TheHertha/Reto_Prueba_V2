@@ -14,7 +14,7 @@ if (!isset($_SESSION['csrf_token'])) {
 $csrf_token = $_SESSION['csrf_token'];
 
 
-$facilitadores = ['Alex', 'Adriana', 'Esmeralda', 'Fide', 'Fernando','Francisco', 'Juan', 'Oscar', 'No asignado','No aplica'];
+$facilitadores = ['F2 Adriana', 'F3 Alejandro', 'F4 Fidencio', 'F6 Oscar', 'F7 Juan', 'No asignado','No aplica'];
 $presidentes = ['Juan Pérez', 'Sofía Martínez', 'Luis Fernández', 'No asignado'];
 
 try {
