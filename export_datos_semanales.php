@@ -46,7 +46,7 @@ $encabezados = [
 fputcsv($output, $encabezados);
 
 
-$base_url = 'http://localhost/cat21/';  
+$base_url = 'https://www.retofitcat21dias.mx';  
 
 
 $sql = "
