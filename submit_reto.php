@@ -2,7 +2,7 @@
 session_start();
 require_once 'config.php';
 
-// Check if user is logged in
+
 if (!isset($_SESSION['user_id'])) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Por favor, inicia sesión.']);
@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Check if request is POST
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Validate input data
+
 $semana = isset($_POST['semana']) ? intval($_POST['semana']) : null;
 $reto_id = isset($_POST['reto_id']) ? intval($_POST['reto_id']) : null;
 $estatura = isset($_POST['estatura']) ? floatval($_POST['estatura']) : null;
@@ -34,7 +34,7 @@ if ($semana === null || $reto_id === null || $peso === null || $masa === null ||
     exit;
 }
 
-// For weeks 1, 2, or 3, fetch estatura from Semana 0
+
 if ($semana !== 0) {
     try {
         $stmt = $pdo->prepare("SELECT estatura FROM datos_semanales WHERE usuario_id = :usuario_id AND reto_id = :reto_id AND semana = 0");
@@ -55,7 +55,7 @@ if ($semana !== 0) {
     }
 }
 
-// Validate ranges
+
 if ($semana === 0 && ($estatura === null || $estatura < 50 || $estatura > 250)) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'La estatura debe estar entre 50 y 250 cm.']);
@@ -99,7 +99,7 @@ if ($semana < 0 || $semana > 3) {
     exit;
 }
 
-// Check if data already exists for this user, reto, and semana
+
 try {
     $stmt = $pdo->prepare("SELECT id FROM datos_semanales WHERE usuario_id = :usuario_id AND reto_id = :reto_id AND semana = :semana");
     $stmt->execute([
@@ -120,9 +120,9 @@ try {
     exit;
 }
 
-// Handle file upload for Semana 0 or 3
+
 $image_url = null;
-if (($semana === 0 || $semana === 3) && isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
     $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
     $file_type = mime_content_type($_FILES['image']['tmp_name']);
     if (!in_array($file_type, $allowed_types)) {
@@ -142,7 +142,7 @@ if (($semana === 0 || $semana === 3) && isset($_FILES['image']) && $_FILES['imag
     $image_url = $image_name;
 }
 
-// Insert data into datos_semanales
+
 try {
     $stmt = $pdo->prepare("
         INSERT INTO datos_semanales (usuario_id, reto_id, semana, estatura, peso, masa, grasa, musculo, image)
@@ -160,7 +160,7 @@ try {
         'image' => $image_url
     ]);
 
-    // If Semana 3 data is submitted, ensure user is enabled for ranking
+    
     if ($semana === 3) {
         $stmt = $pdo->prepare("SELECT habilitado FROM usuarios WHERE id = :user_id");
         $stmt->execute(['user_id' => $_SESSION['user_id']]);
@@ -168,7 +168,7 @@ try {
         if ($user['habilitado'] == 0) {
             error_log("submit_reto.php: Semana 3 data submitted but user is disabled, user_id={$_SESSION['user_id']}, reto_id=$reto_id");
         } else {
-            // Optionally trigger ranking update (not needed if ranking.php is dynamic)
+           
             error_log("submit_reto.php: Semana 3 data submitted, eligible for ranking, user_id={$_SESSION['user_id']}, reto_id=$reto_id");
         }
     }

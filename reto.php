@@ -2,7 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     $_SESSION['error'] = "Por favor, inicia sesión para acceder al reto.";
     error_log("reto.php: Redirecting to login.php, no user_id, session=" . json_encode($_SESSION));
@@ -61,7 +60,7 @@ if (!$reto) {
 }
 
 $reto_id     = $reto['id'];
-$reto_nombre = $reto['nombre'] ?? 'Reto sin nombre';   // fallback por si es NULL (aunque no debería)
+$reto_nombre = $reto['nombre'] ?? 'Reto sin nombre';   
 
 
    $stmt = $pdo->prepare("
@@ -94,14 +93,14 @@ $reto_nombre = $reto['nombre'] ?? 'Reto sin nombre';   // fallback por si es NUL
     exit;
 }
 
-// Calculate progress (only if Semana 0 and Semana 3 data exist)
+
 $progress = ['rango_edad' => $rango_edad];
 
 if (isset($user_data[0]) && isset($user_data[3])) {
     $datos0 = $user_data[0];
     $datos3 = $user_data[3];
 
-    // Caso 1: Ya existe avance guardado → usar directamente (más rápido y consistente)
+   
     if ($datos3['promedio_avance'] !== null) {
         $progress = [
             'rango_edad'                    => $rango_edad,
@@ -113,7 +112,7 @@ if (isset($user_data[0]) && isset($user_data[3])) {
         ];
         error_log("reto.php: Leyendo avances GUARDADOS para usuario {$_SESSION['user_id']} - reto $reto_id");
     } 
-    // Caso 2: No existe avance → calcular y guardar
+   
     else {
         error_log("reto.php: Calculando avances (primera vez) para usuario {$_SESSION['user_id']} - reto $reto_id");
 
@@ -478,7 +477,7 @@ body {
     color: #FF0000;
 }
 
-/* Pie de página minimalista */
+/* Pie de página */
 .footer-minimal {
     text-align: center;
     padding: 40px;
@@ -849,37 +848,36 @@ body {
         ['name' => 'Semana 3', 'semana' => 3, 'color' => 'amarillo']
     ];
 
-    // Fechas del reto (ya las tienes cargadas)
+    // Fechas del reto
     $start_date = new DateTime($reto['start_date']);
     $end_date   = new DateTime($reto['end_date']);
     $current_date = new DateTime();
 
-    // Fecha de activación especial para Semana 3: últimos 3 días (end_date - 3 días)
+    // Fecha de activación para Semana 3
     $semana3_activation = clone $end_date;
     $semana3_activation->modify('-3 days');  // Activa desde el día end_date - 3
 
     foreach ($semanas as $semana) {
         $semana_num = $semana['semana'];
 
-        // Fecha de activación por defecto: inmediata para semanas 0-2, especial para semana 3
+        // Fecha de activación
         if ($semana_num === 3) {
             $activation_date = $semana3_activation;
         } else {
             $activation_date = clone $start_date;
-            // Opcional: si quieres retrasar un poco las semanas 1 y 2 también, puedes agregar aquí
-            // $activation_date->add(new DateInterval('P' . ($semana_num * 7) . 'D'));
+        
         }
 
-        // ¿Ya pasó la fecha de activación?
+       
         $is_past_activation = $current_date >= $activation_date;
 
-        // ¿Ya se envió esta semana?
+    
         $is_sent = isset($user_data[$semana_num]);
 
-        // Deshabilitado si: ya enviado O aún no llega la fecha de activación
+        
         $is_disabled = $is_sent || !$is_past_activation;
 
-        // Mensaje informativo si no está activo (opcional, puedes quitarlo)
+
         $message = '';
         if (!$is_past_activation && !$is_sent) {
             $message = '<p style="color:#FF0000; font-weight:bold; margin-bottom:10px;">Disponible a partir del ' . $activation_date->format('d/m/Y') . '</p>';
@@ -888,7 +886,7 @@ body {
         <div class="semana-card">
             <h2><?php echo $semana['name']; ?></h2>
             <?php echo $message; ?>
-            <form action="<?php echo $semana_num == 1 || $semana_num == 2 ? '#' : 'submit_reto.php'; ?>" method="POST" enctype="multipart/form-data" <?php echo $is_disabled ? 'class="disabled"' : ''; ?>>
+            <form action="submit_reto.php" method="POST" enctype="multipart/form-data" <?php echo $is_disabled ? 'class="disabled"' : ''; ?>>
                 <input type="hidden" name="semana" value="<?php echo $semana_num; ?>">
                 <input type="hidden" name="reto_id" value="<?php echo $reto_id; ?>">
                 <input type="number" step="0.1" name="estatura" placeholder="Estatura (cm)" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['estatura'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ($semana_num != 0 ? 'disabled' : ''); ?> <?php echo $semana_num == 0 ? 'required' : ''; ?>>
@@ -896,11 +894,9 @@ body {
                 <input type="number" step="0.1" name="masa" placeholder="Grasa Visceral" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['masa'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?> required>
                 <input type="number" step="0.1" name="grasa" placeholder="Grasa (%)" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['grasa'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?> required>
                 <input type="number" step="0.1" name="musculo" placeholder="Músculo (%)" value="<?php echo isset($user_data[$semana_num]) ? $user_data[$semana_num]['musculo'] : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?> required>
-                <?php if ($semana_num == 0 || $semana_num == 3): ?>
-                    <input type="file" name="image" accept="image/jpeg,image/png,image/gif" <?php echo $is_disabled ? 'disabled' : ''; ?>>
-                    <?php if (isset($user_data[$semana_num]['image']) && $user_data[$semana_num]['image']): ?>
-                        <img src="Uploads/<?php echo htmlspecialchars($user_data[$semana_num]['image']); ?>" class="image-preview show">
-                    <?php endif; ?>
+                <input type="file" name="image" accept="image/jpeg,image/png,image/gif" <?php echo $is_disabled ? 'disabled' : ''; ?>>
+                <?php if (isset($user_data[$semana_num]['image']) && $user_data[$semana_num]['image']): ?>
+                    <img src="Uploads/<?php echo htmlspecialchars($user_data[$semana_num]['image']); ?>" class="image-preview show">
                 <?php endif; ?>
                 <button type="submit" class="btn-<?php echo $semana['color']; ?> <?php echo $is_disabled ? 'btn-disabled' : ''; ?>" <?php echo $is_disabled ? 'disabled' : ''; ?>>
                     <?php echo $is_sent ? 'DATOS ENVIADOS' : 'Enviar Datos'; ?>
@@ -993,24 +989,8 @@ body {
             });
         });
 
-      
-        document.querySelectorAll('form[action="#"]').forEach(form => {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                form.classList.add('disabled');
-                form.querySelectorAll('input').forEach(input => input.disabled = true);
-                const button = form.querySelector('button');
-                button.classList.add('btn-disabled');
-                button.textContent = 'DATOS ENVIADOS';
-                const successDiv = document.createElement('div');
-                successDiv.className = 'success-container';
-                successDiv.textContent = 'Datos registrados (no guardados en la base de datos).';
-                document.querySelector('.main-content').prepend(successDiv);
-                setTimeout(() => successDiv.remove(), 3000);
-            });
-        });
 
-        // Manejo de formularios reales
+        // Manejo de formularios
         document.querySelectorAll('form[action="submit_reto.php"]').forEach(form => {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -1041,7 +1021,7 @@ body {
                         successDiv.className = 'success-container';
                         successDiv.textContent = result.message;
                         document.querySelector('.main-content').prepend(successDiv);
-                        setTimeout(() => location.reload(), 1000); // Reload to update progress
+                        setTimeout(() => location.reload(), 1000); 
                         setTimeout(() => successDiv.remove(), 3000);
                     } else {
                         const errorDiv = document.createElement('div');
