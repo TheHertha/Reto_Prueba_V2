@@ -231,7 +231,7 @@
       .main-button a {
         display: inline-block;
         padding: 15px 30px;
-        background: linear-gradient(135deg, #ffdf00, #ffdf00);
+        background: linear-gradient(135deg, #ed563b, #ff6b47);
         color: #fff;
         text-decoration: none;
         border-radius: 30px;
@@ -276,7 +276,6 @@
         line-height: 1.6;
       }
 
-      /* FEATURES SECTION RESPONSIVE */
       .features-items {
         list-style: none;
         padding: 0;
@@ -1150,7 +1149,6 @@
   </head>
   <body>
     <a id="header"></a>
-    <!-- ***** Preloader Start ***** -->
 <div id="js-preloader" class="js-preloader">
       <div class="logo-wrapper">
         <div class="logo-container">
@@ -1158,16 +1156,16 @@
         </div>
       </div>
     </div>
-    <!-- ***** Preloader End ***** -->
+ 
 
-    <!-- Chatbot Toggle Button -->
+    <!-- Chatbot -->
     <button class="chatbot-toggle" id="chatbotToggle" title="Abrir Chatbot">
       <svg class="chat-icon" viewBox="0 0 24 24">
         <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
       </svg>
     </button>
 
-    <!-- Chatbot Container -->
+    <!-- Chatbot -->
     <div class="chatbot-container" id="chatbotContainer">
       <div class="chatbot-header">
         <h3>RetoFitCat Chatbot</h3>
@@ -1182,7 +1180,7 @@
       </div>
     </div>
 
-    <!-- ***** Header Area ***** -->
+    <!--Header-->
     <header class="header-area header-sticky">
       <div class="container">
         <nav class="main-nav">
@@ -1209,7 +1207,7 @@
       </audio>
     </header>
 
-    <!-- ***** Main Banner Area ***** -->
+    <!--Banner-->
     <div class="main-banner" id="top">
       <video autoplay muted loop id="bg-video">
         <source src="assets/images/banner1.mp4" type="video/mp4" />
@@ -1223,7 +1221,7 @@
             <a href="#" id="openVideoPopup" style="display:inline-block;">Conoce más del reto</a>
           </div>
 
-<!-- Video Popup Modal -->
+<!-- Video -->
 <div id="videoPopupModal" class="video-popup-modal">
   <div class="video-popup-content">
     <button class="video-popup-close" id="closeVideoPopup" title="Cerrar">&times;</button>
@@ -1321,18 +1319,51 @@
       </div>
     </div>
 
-    <!-- ***** Features Section ***** -->
-    <section class="section" id="features">
+
+
+<br><br><br><br><br>
+
+
+    <!--Features-->
+  <section class="section" id="features" style="
+      background-image: url('assets/images/fondo2.jpeg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      position: relative;
+    ">
       <div class="container">
         <div class="row">
           <div class="col-12">
-            <div class="section-heading">
-              <h2>¿Qué es el <em>RETOFITCAT21DÍAS</em></h2>
-              <p>Este <strong>reto personal</strong> está diseñado para ayudarte a mejorar y empezar una nueva vida en solo <strong>21 Días</strong>, en este reto conocerás:</p>
+            <div class="section-heading" style="
+              position: relative; 
+              z-index: 2; 
+              display: flex; 
+              flex-direction: column; 
+              align-items: center; 
+              text-align: center;
+            ">
+              
+              <!-- Capa oscura semi-transparente detrás del título -->
+              <div style="
+                position: absolute;
+                inset: -50px -40px -40px -40px;
+                background: rgba(0, 0, 0, 0.72);
+                border-radius: 20px;
+                z-index: -1;
+              "></div>
+              
+              <h2 style="margin: 0 0 15px 0; color: #ffffff;">
+                ¿Qué es el <em style="color: #FF6B00;">RETOFITCAT21DÍAS</em>
+              </h2>
+              
+              <p style="color: #ffffff; margin: 0; font-size: 1.15rem; max-width: 800px; line-height: 1.6;">
+                Este <strong>reto personal</strong> está diseñado para ayudarte a mejorar y empezar una nueva vida en solo <strong>21 Días</strong>, en este reto conocerás:
+              </p>
             </div>
           </div>
         </div>
-        
+        <br>
         <div class="row">
           <div class="col-lg-6">
             <ul class="features-items">
@@ -1404,74 +1435,196 @@
           </div>
         </div>
       </div>
+
+      <style>
+        /* Estilos para las cartas más oscuras */
+        .feature-item {
+          background: rgba(20, 20, 20, 0.92) !important;
+          border-radius: 16px;
+          padding: 25px;
+          margin-bottom: 20px;
+          border: 1px solid rgba(237, 86, 59, 0.25);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+          transition: all 0.3s ease;
+          backdrop-filter: blur(8px);
+        }
+
+        .feature-item:hover {
+          background: rgba(15, 15, 15, 0.95) !important;
+          transform: translateY(-4px);
+          box-shadow: 0 12px 35px rgba(237, 86, 59, 0.2);
+        }
+
+        .feature-item .right-content h4 {
+          color: #ffffff;
+          margin-bottom: 10px;
+        }
+
+        .feature-item .right-content p {
+          color: #ddd;
+          line-height: 1.6;
+        }
+
+        .feature-item .text-button {
+          color: #FF6B00;
+          text-decoration: none;
+          font-weight: 600;
+          margin-top: 12px;
+          display: inline-block;
+        }
+
+        .feature-item .text-button:hover {
+          color: #ffffff;
+        }
+
+        /* Mantengo los iconos como estaban */
+        .left-icon div {
+          width: 60px;
+          height: 60px;
+          background: #ed563b;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 1.5rem;
+        }
+      </style>
     </section>
 
-    <!-- ***** Sección de Premiación ***** -->
-    <section class="section" id="call-to-action" style="background: #111; padding: 80px 0;">
-      <div class="container">
-        <div class="row">
-          <div class="col-12">
-            <div class="text-center">
-              <h2 style="color: #fff; font-size: clamp(2rem, 6vw, 3rem); margin-bottom: 20px;">PREMI<em style="color: #ed563b;">ACIÓN</em></h2>
-              <p style="color: #ccc; font-size: clamp(1rem, 3vw, 1.2rem); max-width: 800px; margin: 20px auto 40px; line-height: 1.6;">Al finalizar el reto, se reconocerá el esfuerzo y compromiso de los participantes con premios especiales. Los primeros lugares en 3 categorías distintas recibirán premios increíbles como también reconocimiento a su dedicación y transformación.</p>
-              
-              <!-- Podio integrado -->
-              <div class="podio-container">
-                <div class="podio-grid">
-                  <div class="ganador segundo">
-                    <div class="perfil">
-                      <div class="icono-medalla">🥈</div>
-                      MG
-                    </div>
-                    <div class="base">
-                      <div class="posicion">2</div>
-                    </div>
-                    <div class="info">
-                      <div class="nombre">María González</div>
-                    </div>
-                  </div>
-                  <div class="ganador primero">
-                    <div class="perfil">
-                      <div class="icono-corona">👑</div>
-                      <div class="icono-medalla">🥇</div>
-                      SL
-                    </div>
-                    <div class="base">
-                      <div class="posicion">1</div>
-                    </div>
-                    <div class="info">
-                      <div class="nombre">Sofía López</div>
-                    </div>
-                  </div>
-                  <div class="ganador tercero">
-                    <div class="perfil">
-                      <div class="icono-medalla">🥉</div>
-                      AP
-                    </div>
-                    <div class="base">
-                      <div class="posicion">3</div>
-                    </div>
-                    <div class="info">
-                      <div class="nombre">Ana Pérez</div>
-                    </div>
-                  </div>
+
+<br><br><br><br><br>
+
+
+
+    <!--Sección de Premiación-->
+<section class="section" id="call-to-action" style="
+    background-image: url('assets/images/fondo3.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    padding: 80px 0;
+    position: relative;
+  ">
+  <div class="container">
+    <div class="row">
+      <div class="col-12">
+        <div class="text-center" style="
+          position: relative; 
+          z-index: 2; 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          text-align: center;
+        ">
+          
+          <!-- Capa oscura semi-transparente detrás del título y texto -->
+          <div style="
+            position: absolute;
+            inset: -60px -45px -55px -45px;
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 24px;
+            z-index: -1;
+          "></div>
+          
+          <h2 style="color: #ffffff; font-size: clamp(2rem, 6vw, 3rem); margin-bottom: 20px;">
+            PREMI<em style="color: #FF6B00;">ACIÓN</em>
+          </h2>
+          
+          <p style="color: #ffffff; font-size: clamp(1rem, 3vw, 1.2rem); max-width: 800px; margin: 20px auto 40px; line-height: 1.6;">
+            Al finalizar el reto, se reconocerá el esfuerzo y compromiso de los participantes con premios especiales. 
+            Los primeros lugares en 3 categorías distintas recibirán premios increíbles como también reconocimiento a su dedicación y transformación.
+          </p>
+          
+          <!-- Podio integrado -->
+          <div class="podio-container">
+            <div class="podio-grid">
+              <div class="ganador segundo">
+                <div class="perfil">
+                  <div class="icono-medalla">🥈</div>
+                  MG
+                </div>
+                <div class="base">
+                  <div class="posicion">2</div>
+                </div>
+                <div class="info">
+                  <div class="nombre">María González</div>
+                </div>
+              </div>
+              <div class="ganador primero">
+                <div class="perfil">
+                  <div class="icono-corona">👑</div>
+                  <div class="icono-medalla">🥇</div>
+                  SL
+                </div>
+                <div class="base">
+                  <div class="posicion">1</div>
+                </div>
+                <div class="info">
+                  <div class="nombre">Sofía López</div>
+                </div>
+              </div>
+              <div class="ganador tercero">
+                <div class="perfil">
+                  <div class="icono-medalla">🥉</div>
+                  AP
+                </div>
+                <div class="base">
+                  <div class="posicion">3</div>
+                </div>
+                <div class="info">
+                  <div class="nombre">Ana Pérez</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <!-- ***** Testimonios Section ***** -->
+    
+<br><br><br><br><br>
+  
 
-    <section class="section" id="nutricion-bienestar" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); color: #fff; padding: 60px 0 40px 0;">
+  <section class="section" id="nutricion-bienestar" style="
+    background-image: url('assets/images/fondo4.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    position: relative;
+    padding: 60px 0 40px 0;
+  ">
       <div class="container">
-        <div class="section-heading">
-          <h2>Nutrición y <em>Bienestar</em></h2>
-          <p>Descubre cómo una alimentación saludable y la nutrición deportiva pueden transformar tu vida y tu rendimiento.</p>
+        <div class="section-heading" style="
+          position: relative; 
+          z-index: 2; 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          text-align: center;
+        ">
+          
+          <!-- Capa oscura semi-transparente detrás del título -->
+          <div style="
+            position: absolute;
+            inset: -45px -40px -40px -40px;
+            background: rgba(0, 0, 0, 0.72);
+            border-radius: 20px;
+            z-index: -1;
+          "></div>
+          
+          <h2 style="margin: 0 0 15px 0; color: #ffffff;">
+            Nutrición <em style="color: #FF6B00;">Bienestar</em>
+          </h2>
+          
+          <p style="color: #ffffff; margin: 0; font-size: 1.15rem; max-width: 700px; line-height: 1.6;">
+            Descubre cómo una alimentación saludable y la nutrición deportiva pueden transformar tu vida y tu rendimiento.
+          </p>
         </div>
         
+        <br>
         <div class="nutricion-grid">
           <!-- Alimentación Saludable Card -->
           <div class="nutricion-card alimentacion-card">
@@ -1566,341 +1719,86 @@
           </div>
         </div>
       </div>
-    </section>
 
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        font-family: 'Arial', sans-serif;
-        background: #1a1a1a;
-      }
-
-      .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 20px;
-      }
-
-      .section-heading {
-        text-align: center;
-        margin-bottom: 40px;
-      }
-
-      .section-heading h2 {
-        font-size: clamp(2rem, 5vw, 3rem);
-        font-weight: 700;
-        color: #fff;
-        margin-bottom: 15px;
-      }
-
-      .section-heading em {
-        color: #ed563b;
-        font-style: italic;
-      }
-
-      .section-heading p {
-        color: #ccc;
-        font-size: clamp(1rem, 2.5vw, 1.2rem);
-        max-width: 600px;
-        margin: 0 auto;
-        line-height: 1.6;
-      }
-
-      /* Nutrición y Bienestar Styles */
-      .nutricion-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 30px;
-        margin-top: 30px;
-      }
-
-      .nutricion-card {
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.08));
-        border-radius: 16px;
-        padding: 25px;
-        border: 1px solid rgba(237, 86, 59, 0.2);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(10px);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-      }
-
-      .nutricion-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(135deg, #ed563b, #ff6b47);
-        border-radius: 16px 16px 0 0;
-      }
-
-      .nutricion-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 40px rgba(237, 86, 59, 0.15);
-        border-color: rgba(237, 86, 59, 0.4);
-      }
-
-      .card-header {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        margin-bottom: 20px;
-      }
-
-      .icon-wrapper {
-        position: relative;
-      }
-
-      .icon-circle {
-        width: 55px;
-        height: 55px;
-        background: linear-gradient(135deg, #ed563b, #ff6b47);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.6rem;
-        box-shadow: 0 8px 20px rgba(237, 86, 59, 0.3);
-        position: relative;
-        overflow: hidden;
-      }
-
-
-      .card-header h3 {
-        font-size: clamp(1.3rem, 3.5vw, 1.6rem);
-        font-weight: 700;
-        color: #fff;
-        margin: 0;
-      }
-
-      .featured-banner {
-        background: linear-gradient(135deg, #ed563b, #ff6b47);
-        color: #fff;
-        padding: 15px;
-        border-radius: 12px;
-        text-align: center;
-        margin-bottom: 20px;
-        box-shadow: 0 6px 20px rgba(237, 86, 59, 0.2);
-        position: relative;
-        overflow: hidden;
-      }
-
-      .featured-banner::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
-        animation: shine 3s infinite;
-      }
-
-      @keyframes shine {
-        0% { transform: translateX(-100%) translateY(-100%) rotate(30deg); }
-        100% { transform: translateX(100%) translateY(100%) rotate(30deg); }
-      }
-
-      .featured-banner strong {
-        font-size: clamp(0.95rem, 2.2vw, 1.1rem);
-      }
-
-      .benefits-list {
-        margin-bottom: 20px;
-      }
-
-      .benefit-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        padding: 10px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-      }
-
-      .benefit-item:last-child {
-        border-bottom: none;
-      }
-
-      .benefit-item:hover {
-        background: rgba(237, 86, 59, 0.05);
-        border-radius: 8px;
-        padding: 10px 12px;
-        margin: 0 -12px;
-      }
-
-      .benefit-icon {
-        font-size: 1.3rem;
-        flex-shrink: 0;
-        width: 35px;
-        height: 35px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(237, 86, 59, 0.1);
-        border-radius: 8px;
-        border: 1px solid rgba(237, 86, 59, 0.2);
-      }
-
-      .benefit-content {
-        flex: 1;
-      }
-
-      .benefit-content strong {
-        color: #ed563b;
-        font-size: clamp(0.9rem, 2.2vw, 1rem);
-        display: block;
-        margin-bottom: 3px;
-      }
-
-      .benefit-content p {
-        color: #ccc;
-        font-size: clamp(0.8rem, 1.8vw, 0.9rem);
-        line-height: 1.4;
-        margin: 0;
-      }
-
-      /* Responsive - Tablet */
-      @media (max-width: 992px) {
+      <style>
         .nutricion-grid {
-          grid-template-columns: 1fr;
-          gap: 25px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 30px;
+          margin-top: 30px;
         }
-        
-        .container {
-          padding: 0 15px;
-        }
-      }
 
-      /* Responsive - Mobile con scroll horizontal */
-      @media (max-width: 768px) {
-        .section {
-          padding: 40px 0 30px 0 !important;
+        .nutricion-card {
+          background: linear-gradient(145deg, rgba(20, 20, 20, 0.92), rgba(30, 30, 30, 0.95)) !important;
+          border-radius: 16px;
+          padding: 25px;
+          border: 1px solid rgba(237, 86, 59, 0.25);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(10px);
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
         }
-        
+
+        .nutricion-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 40px rgba(237, 86, 59, 0.2);
+        }
+
+        /* Resto de estilos (mantengo los tuyos originales y solo actualizo lo necesario) */
         .section-heading {
-          margin-bottom: 25px;
+          text-align: center;
+          margin-bottom: 40px;
         }
-        
-        .container {
-          padding: 0 10px;
-        }
-        
-        .nutricion-grid {
-          display: flex;
-          overflow-x: auto;
-          overflow-y: visible;
-          scroll-snap-type: x mandatory;
-          gap: 20px;
-          margin-top: 20px;
-          padding: 0 5px 15px 5px;
-          -webkit-overflow-scrolling: touch;
-        }
-        
-        .nutricion-card {
-          min-width: 280px;
-          max-width: 320px;
-          flex: 0 0 auto;
-          scroll-snap-align: start;
-          padding: 20px;
-        }
-        
-        .card-header {
-          flex-direction: row;
-          text-align: left;
-          gap: 12px;
-        }
-        
-        .icon-circle {
-          width: 45px;
-          height: 45px;
-          font-size: 1.4rem;
-        }
-        
-        .featured-banner {
-          padding: 12px;
-          font-size: 0.9rem;
-        }
-        
-        .benefit-item {
-          padding: 8px 0;
-        }
-        
-        .benefit-icon {
-          width: 30px;
-          height: 30px;
-          font-size: 1.1rem;
-        }
-        
-        /* Ocultar scrollbar pero mantener funcionalidad */
-        .nutricion-grid::-webkit-scrollbar {
-          height: 4px;
-        }
-        
-        .nutricion-grid::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 2px;
-        }
-        
-        .nutricion-grid::-webkit-scrollbar-thumb {
-          background: rgba(237, 86, 59, 0.5);
-          border-radius: 2px;
-        }
-        
-        .nutricion-grid::-webkit-scrollbar-thumb:hover {
-          background: rgba(237, 86, 59, 0.7);
-        }
-      }
 
-      /* Mobile pequeño */
-      @media (max-width: 480px) {
-        .nutricion-card {
-          min-width: 260px;
-          max-width: 280px;
-          padding: 15px;
+        .section-heading h2 {
+          font-size: clamp(2rem, 5vw, 3rem);
+          font-weight: 700;
+          margin-bottom: 15px;
         }
-        
-        .icon-circle {
-          width: 40px;
-          height: 40px;
-          font-size: 1.2rem;
+
+        .section-heading em {
+          font-style: italic;
         }
-        
+
         .card-header h3 {
-          font-size: 1.2rem;
+          font-size: clamp(1.3rem, 3.5vw, 1.6rem);
+          font-weight: 700;
+          color: #fff;
+          margin: 0;
         }
-        
-        .featured-banner {
-          padding: 10px;
-          font-size: 0.85rem;
-        }
-        
+
         .benefit-content strong {
-          font-size: 0.9rem;
+          color: #ed563b;
         }
-        
+
         .benefit-content p {
-          font-size: 0.8rem;
+          color: #ddd;
         }
-        
-        .nutricion-grid::-webkit-scrollbar {
-          height: 3px;
+
+        @media (max-width: 992px) {
+          .nutricion-grid {
+            grid-template-columns: 1fr;
+            gap: 25px;
+          }
         }
-      }
-    </style>
 
-
-
-
-
+        @media (max-width: 768px) {
+          .nutricion-grid {
+            display: flex;
+            overflow-x: auto;
+            gap: 20px;
+            padding-bottom: 15px;
+          }
+          .nutricion-card {
+            min-width: 280px;
+            max-width: 320px;
+            flex: 0 0 auto;
+          }
+        }
+      </style>
+    </section>
+    <br><br><br><br>
 
 
 <!-- 
@@ -2385,21 +2283,50 @@
       event.target.classList.add('active');
     }
 
-        // Initialize first tab as active
+        
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('.tab-button').classList.add('active');
             document.querySelector('.tab-content').classList.add('active');
         });
     </script>
     </section>
-
-    <!-- ***** Recetas Destacadas Section ***** -->
-    <section class="section" id="recetas">
+<br>
+    <!--Recetas Destacadas-->
+<section class="section" id="recetas" style="
+      background-image: url('assets/images/fondo5.jpeg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      position: relative;
+    ">
       <div class="container">
-        <div class="section-heading">
-          <h2>Recetas <em>Destacadas</em></h2>
-          <p>Descubre recetas saludables y guías para tu transformación.</p>
+        <div class="section-heading" style="
+          position: relative; 
+          z-index: 2; 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          text-align: center;
+        ">
+          
+          <!-- Capa oscura detrás del texto -->
+          <div style="
+            position: absolute;
+            inset: -40px -40px -35px -40px;
+            background: rgba(0, 0, 0, 0.68);
+            border-radius: 20px;
+            z-index: -1;
+          "></div>
+          
+          <h2 style="margin: 0 0 12px 0; color: #ffffff;">
+            Recetas <em style="color: #FF6B00;">Destacadas</em>
+          </h2>
+          
+          <p style="color: #ffffff; margin: 0; font-size: 1.15rem; max-width: 700px;">
+            Descubre recetas saludables y guías para tu transformación.
+          </p>
         </div>
+        
         <div class="recetas-destacadas-card">
           <a href="recetas_guias.html" class="recetas-link" title="Ver recetas">
             <img src="assets/images/Receta1.jpg" alt="Recetas Destacadas" class="recetas-img">
@@ -2409,6 +2336,7 @@
           </a>
         </div>
       </div>
+
       <style>
         .recetas-destacadas-card {
           display: flex;
@@ -2442,41 +2370,73 @@
           left: 0;
           right: 0;
           background: linear-gradient(0deg, rgba(237,86,59,0.95) 0%, rgba(237,86,59,0.2) 100%);
-          color: #fff;
+          color: #ffffff;
           text-align: center;
           padding: 24px 0 12px 0;
           font-size: 1.5rem;
           font-weight: 600;
           letter-spacing: 1px;
           border-radius: 0 0 24px 24px;
-          transition: background 0.2s;
         }
         .recetas-link:hover .recetas-overlay {
           background: linear-gradient(0deg, rgba(237,86,59,1) 0%, rgba(237,86,59,0.4) 100%);
         }
+
         @media (max-width: 600px) {
           .recetas-img { height: 160px; }
           .recetas-destacadas-card { margin-bottom: 24px; }
+          .section-heading { padding: 0 15px; }
         }
       </style>
     </section>
 
- <!-- ***** FAQ Section ***** -->
-<section id="faq" class="faq">
+
+<br><br><br><br><br>
+
+
+
+ <!--FAQ-->
+<section id="faq" class="faq" style="
+    background-image: url('assets/images/fondo6.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    position: relative;
+  ">
   <div class="container">
-    <div class="section-header">
-      <h2><strong>Preguntas Frecuentes</strong></h2>
+    <div class="section-header" style="
+      position: relative; 
+      z-index: 2; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      text-align: center;
+      margin-bottom: 40px;
+    ">
+      
+      <!-- Capa oscura detrás del título -->
+      <div style="
+        position: absolute;
+        inset: -40px -40px -35px -40px;
+        background: rgba(0, 0, 0, 0.68);
+        border-radius: 20px;
+        z-index: -1;
+      "></div>
+      
+      <h2 style="margin: 0; color: #ffffff;">
+        Preguntas <em style="color: #FF6B00;">Frecuentes</em>
+      </h2>
     </div>
 
     <div class="faq-container">
 
       <div class="faq-item">
         <div class="faq-question" 
-             style="cursor:default; background:none; border:none; color:#fff; font-size:clamp(1rem,3vw,1.1rem); font-weight:600; display:block; padding:20px 10 8px 0;">
+             style="cursor:default; background:none; border:none; color:#ffffff; font-size:clamp(1rem,3vw,1.1rem); font-weight:600; display:block; padding:20px 10px 8px 0;">
           ¿Qué tipo de actividades incluye el reto?
         </div>
         <div class="faq-answer" 
-             style="padding:0 10 18px 0; max-height:none; background:none; color:#ddd; line-height:1.6;">
+             style="padding:0 10px 18px 0; max-height:none; background:none; color:#ddd; line-height:1.6;">
           <p>
             El <strong>RetoFitCat21Días</strong> incluye ejercicios como lagartijas y sentadillas para acelerar el metabolismo, 
             con sesiones de 30-45 minutos adaptadas a tu nivel.
@@ -2486,11 +2446,11 @@
 
       <div class="faq-item">
         <div class="faq-question" 
-             style="cursor:default; background:none; border:none; color:#fff; font-size:clamp(1rem,3vw,1.1rem); font-weight:600; display:block; padding:20px 10 8px 0;">
+             style="cursor:default; background:none; border:none; color:#ffffff; font-size:clamp(1rem,3vw,1.1rem); font-weight:600; display:block; padding:20px 10px 8px 0;">
           ¿Cómo puedo registrarme al RetoFitCat21Días?
         </div>
         <div class="faq-answer" 
-             style="padding:0 10 18px 0; max-height:none; background:none; color:#ddd; line-height:1.6;">
+             style="padding:0 10px 18px 0; max-height:none; background:none; color:#ddd; line-height:1.6;">
           <p>
             Visita <strong>retofitcat21dias.com/registro</strong> y completa el formulario. Si eres retador, coloca el nombre de tu coach. 
             Si eres coach, selecciona tu facilitador.
@@ -2500,11 +2460,11 @@
 
       <div class="faq-item">
         <div class="faq-question" 
-             style="cursor:default; background:none; border:none; color:#fff; font-size:clamp(1rem,3vw,1.1rem); font-weight:600; display:block; padding:20px 10 8px 0;">
+             style="cursor:default; background:none; border:none; color:#ffffff; font-size:clamp(1rem,3vw,1.1rem); font-weight:600; display:block; padding:20px 10px 8px 0;">
           ¿Hay algún costo por participar en el reto?
         </div>
         <div class="faq-answer" 
-             style="padding:0 10 18px 0; max-height:none; background:none; color:#ddd; line-height:1.6;">
+             style="padding:0 10px 18px 0; max-height:none; background:none; color:#ddd; line-height:1.6;">
           <p>
             El reto tiene un <strong>costo de inversión</strong> que incluye sesiones, plan nutricional, seguimiento de coaches certificados 
             y material de apoyo.
@@ -2515,9 +2475,10 @@
     </div>
   </div>
 </section>
+<br><br><br><br><br>
 
 
-    <!-- ***** Footer ***** -->
+    <!--Footer-->
     <footer>
       <div class="container">
         <div class="row">
