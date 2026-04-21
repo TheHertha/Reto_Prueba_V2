@@ -983,10 +983,10 @@ body {
   </div>
 </div>
 
-<script>
-  const API_KEY = "AIzaSyCttKjtKBeuMP3Z1ReOH0mYt2fWVLeGc_Q"; // ← verifica que sea válida
-  const MODEL = "gemini-2.5-flash";
+<script src="https://cdn.jsdelivr.net/npm/marked@14.0.0/lib/marked.umd.min.js"></script>
 
+<script>
+  // === CONFIGURACIÓN DEL CHATBOT ===
   const toggle = document.getElementById('chatbotToggle');
   const container = document.getElementById('chatbotContainer');
   const closeBtn = document.getElementById('chatbotClose');
@@ -996,20 +996,13 @@ body {
 
   let history = [];
 
-  console.log("Chatbot script cargado. Elementos:", { toggle: !!toggle, container: !!container });
-
-  if (!toggle || !container) {
-    console.error("Error: No se encontraron elementos del chatbot. Revisa IDs en HTML.");
-  }
-
-  // Mensaje inicial SIEMPRE (incluso si no abre, se prepara)
+  // Mensaje inicial
   const initialText = "¡Hola! Soy el Dr. NutriBot.\n¿Qué duda tienes sobre nutrición hoy?";
   addMessage(initialText, 'bot');
   history.push({ role: "model", parts: [{ text: initialText }] });
 
   if (toggle) {
     toggle.addEventListener('click', () => {
-      console.log("Click en toggle");
       container.classList.toggle('open');
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
@@ -1017,7 +1010,6 @@ body {
 
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
-      console.log("Click en cerrar");
       container.classList.remove('open');
     });
   }
@@ -1037,43 +1029,41 @@ body {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
     try {
-      console.log("Enviando a Gemini...");
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: history,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
-            systemInstruction: {
-              parts: [{
-                text: `Eres Dr. NutriBot, asistente de nutrición amigable y profesional.
+      console.log("Enviando mensaje al proxy...");
+
+      const res = await fetch('chatbot-proxy.php', {   // ←←← ESTA ES LA LÍNEA IMPORTANTE
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: history,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+          systemInstruction: {
+            parts: [{
+              text: `Eres Dr. NutriBot, asistente de nutrición amigable y profesional.
 Responde SIEMPRE en español, claro, corto y positivo.
 Usa Markdown cuando sea útil.
 Solo dudas generales. Nunca dietas personalizadas ni consejos médicos.`
-              }]
-            }
-          })
-        }
-      );
+            }]
+          }
+        })
+      });
 
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`API error ${res.status}: ${errText}`);
+        throw new Error(`Error ${res.status}: ${errText}`);
       }
 
       const data = await res.json();
-      const botText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No respuesta";
+      const botText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Lo siento, no pude responder en este momento.";
 
       typing.remove();
       addMessage(botText, 'bot');
       history.push({ role: "model", parts: [{ text: botText }] });
 
     } catch (err) {
-      console.error("Error en Gemini:", err);
+      console.error("Error en el chatbot:", err);
       typing.remove();
-      addMessage("¡Ups! Algo falló (revisa consola). Intenta más tarde.", 'bot');
+      addMessage("¡Ups! Hubo un problema de conexión. Inténtalo de nuevo.", 'bot');
     }
   }
 
@@ -1085,8 +1075,7 @@ Solo dudas generales. Nunca dietas personalizadas ni consejos médicos.`
       try {
         msg.innerHTML = marked.parse(text);
       } catch (e) {
-        console.error("Error marked:", e);
-        msg.textContent = text; // fallback
+        msg.textContent = text;
       }
     } else {
       msg.textContent = text;
@@ -1095,6 +1084,7 @@ Solo dudas generales. Nunca dietas personalizadas ni consejos médicos.`
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
+  // Event listeners
   if (sendBtn) sendBtn.addEventListener('click', sendMessage);
   if (input) {
     input.addEventListener('keypress', e => {
