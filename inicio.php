@@ -1074,7 +1074,7 @@ Solo dudas generales. Nunca dietas personalizadas ni consejos médicos.`
     if (sender === 'bot') {
       try {
         msg.innerHTML = marked.parse(text);
-      } catch (e) {x`
+            } catch (e) {
         msg.textContent = text;
       }
     } else {
