@@ -20,6 +20,7 @@ body {
     line-height: 1.6;
 }
 
+/* ── HEADER ── */
 .header {
     display: flex;
     justify-content: space-between;
@@ -46,11 +47,13 @@ body {
     text-transform: uppercase;
     font-size: 24px;
     letter-spacing: 2px;
+    white-space: nowrap;
 }
 
 .header-right {
     display: flex;
     gap: 15px;
+    flex-shrink: 0;
 }
 
 .profile-btn,
@@ -72,6 +75,7 @@ body {
     color: #000000;
 }
 
+/* ── NAV ── */
 .navigation {
     display: flex;
     justify-content: center;
@@ -103,105 +107,77 @@ body {
     transition: left 0.4s ease;
 }
 
-.nav-btn:hover::before {
-    left: 0;
-}
+.nav-btn:hover::before { left: 0; }
+.nav-btn:hover         { color: white; }
+.nav-btn span          { position: relative; z-index: 1; }
 
-.nav-btn:hover {
-    color: white;
-}
-
-.nav-btn span {
-    position: relative;
-    z-index: 1;
-}
-
-.carousel-container {
+/* ── SINGLE SECTION WRAPPER ── */
+.pdf-section {
     margin: 40px auto;
-    max-width: 90%;
+    max-width: 1100px;
+    width: 92%;
     background: #f8f8f8;
-    border: 1px solid #33333300;
-    border-radius: 8px;
-    overflow: visible;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 32px 24px;
 }
 
-.footer-minimal {
-    text-align: center;
-    padding: 30px;
-    border-top: 1px solid #e0e0e0;
-    margin-top: 30px;
+/* ── CSS GRID: 3 cols → 2 cols → 1 col ── */
+.pdf-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
 }
 
-.footer-minimal p {
-    font-size: 12px;
-    color: #999;
-    text-transform: uppercase;
+@media (max-width: 860px) {
+    .pdf-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ── PDF BOXES ── */
-.pdf-boxes-container {
-    display: flex;
-    justify-content: center;
-    align-items: stretch;
-    gap: 32px;
-    flex-wrap: wrap;
+@media (max-width: 520px) {
+    .pdf-grid { grid-template-columns: 1fr; }
 }
 
+/* ── CARD ── */
 .pdf-box {
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 16px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-    padding: 28px 20px 20px 20px;
-    max-width: 320px;
-    min-width: 240px;
-    flex: 1 1 260px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+    padding: 24px 18px 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    cursor: pointer;
-    transition: box-shadow 0.2s, transform 0.2s;
     text-align: center;
-    position: relative;
+    transition: box-shadow 0.2s, transform 0.2s;
 }
 
 .pdf-box:hover {
     box-shadow: 0 8px 32px rgba(237,86,59,0.18);
-    transform: translateY(-6px) scale(1.03);
+    transform: translateY(-5px) scale(1.02);
 }
 
-.pdf-preview-container {
-    width: 100%;
-    max-width: 180px;
-    height: 120px;
-    border-radius: 10px;
-    margin-bottom: 18px;
-    position: relative;
-    overflow: hidden;
-    background: #f0f0f0;
+.pdf-icon-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    background: #fff4f1;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-/* PDF icon placeholder */
-.pdf-icon {
-    font-size: 48px;
-    color: #ed563b;
-    opacity: 0.85;
+    font-size: 38px;
+    margin-bottom: 16px;
+    flex-shrink: 0;
 }
 
 .pdf-box-title {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: #ed563b;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     line-height: 1.3;
 }
 
 .pdf-box-desc {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     color: #555;
     margin-bottom: 18px;
     flex: 1;
@@ -209,9 +185,10 @@ body {
 
 .pdf-box-buttons {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
     justify-content: center;
+    width: 100%;
 }
 
 .pdf-box-btn {
@@ -219,14 +196,15 @@ body {
     color: #fff;
     border: none;
     border-radius: 8px;
-    padding: 10px 20px;
-    font-size: 0.9rem;
+    padding: 9px 18px;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
     text-decoration: none;
     display: inline-block;
-    min-width: 120px;
+    flex: 1;
+    min-width: 90px;
 }
 
 .pdf-box-btn:hover {
@@ -248,10 +226,8 @@ body {
 .pdf-modal {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     background-color: rgba(0,0,0,0.8);
     z-index: 1000;
     backdrop-filter: blur(5px);
@@ -264,10 +240,7 @@ body {
     animation: fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .pdf-modal-content {
     background: white;
@@ -278,28 +251,28 @@ body {
     max-height: 800px;
     display: flex;
     flex-direction: column;
-    position: relative;
     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     animation: slideIn 0.3s ease;
 }
 
 @keyframes slideIn {
-    from { transform: scale(0.8) translateY(50px); opacity: 0; }
-    to   { transform: scale(1) translateY(0);      opacity: 1; }
+    from { transform: scale(0.85) translateY(40px); opacity: 0; }
+    to   { transform: scale(1)    translateY(0);    opacity: 1; }
 }
 
 .pdf-modal-header {
-    padding: 20px;
+    padding: 18px 20px;
     border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #f8f9fa;
     border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
 }
 
 .pdf-modal-title {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: #333;
 }
@@ -309,13 +282,14 @@ body {
     color: white;
     border: none;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     transition: background 0.2s ease;
 }
 
@@ -323,8 +297,8 @@ body {
 
 .pdf-viewer {
     flex: 1;
-    padding: 20px;
-    overflow: auto;
+    padding: 16px;
+    overflow: hidden;
 }
 
 .pdf-viewer iframe {
@@ -334,67 +308,52 @@ body {
     border-radius: 8px;
 }
 
-/* ── RESPONSIVE ── */
+/* ── FOOTER ── */
+.footer-minimal {
+    text-align: center;
+    padding: 30px;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 40px;
+}
+
+.footer-minimal p {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+}
+
+/* ── RESPONSIVE HEADER ── */
 @media (max-width: 768px) {
-    .header { padding: 10px 20px; height: 70px; flex-wrap: wrap; justify-content: space-between; }
-    .logo { height: 50px; width: 50px; margin-right: 10px; }
-    .title { position: static; transform: none; font-size: 20px; letter-spacing: 1.5px; text-align: center; flex: 1; }
-    .header-right { gap: 10px; }
-    .profile-btn, .logout-btn { padding: 8px 15px; font-size: 12px; }
-    .navigation { flex-direction: column; gap: 15px; margin: 30px 0; }
-    .nav-btn { padding: 12px 24px; font-size: 13px; }
-    .carousel-container { max-width: 95%; padding: 15px; overflow: visible; }
-    .footer-minimal { padding: 20px; }
-    .pdf-boxes-container { flex-direction: column; align-items: center; gap: 24px; }
-    .pdf-box { max-width: 95vw; min-width: unset; }
-    .pdf-modal-content { width: 95%; height: 95%; }
+    .header { padding: 10px 16px; height: auto; min-height: 64px; }
+    .logo   { height: 44px; width: 44px; }
+    .title  { font-size: 17px; letter-spacing: 1px; }
+    .profile-btn, .logout-btn { padding: 7px 12px; font-size: 12px; }
+    .pdf-section { padding: 20px 16px; }
 }
 
 @media (max-width: 480px) {
-    .header { padding: 8px 15px; height: auto; flex-direction: column; align-items: center; gap: 10px; }
-    .logo { height: 40px; width: 40px; margin-right: 0; }
-    .title { font-size: 18px; letter-spacing: 1px; margin: 5px 0; }
-    .header-right { gap: 8px; flex-wrap: wrap; justify-content: center; }
-    .profile-btn, .logout-btn { padding: 6px 12px; font-size: 11px; }
-    .navigation { margin: 20px 0; gap: 10px; }
-    .nav-btn { padding: 10px 20px; font-size: 12px; }
-    .carousel-container { max-width: 100%; padding: 10px; overflow: visible; }
-    .footer-minimal { padding: 15px; }
-    .footer-minimal p { font-size: 11px; }
-    .pdf-box-buttons { flex-direction: column; width: 100%; }
-    .pdf-box-btn { width: 100%; padding: 12px; font-size: 1rem; }
-    .pdf-modal-header { padding: 15px; }
-    .pdf-viewer { padding: 0; overflow: hidden; }
+    .header {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        height: auto;
+    }
+    .title        { position: static; transform: none; font-size: 16px; letter-spacing: 1px; }
+    .header-right { justify-content: center; }
+    .navigation   { flex-direction: column; gap: 12px; margin: 24px 0; }
+    .nav-btn       { padding: 10px 20px; font-size: 12px; }
+    .pdf-section   { width: 96%; padding: 16px 12px; }
     .pdf-modal-content { width: 100%; height: 100%; border-radius: 0; max-height: none; }
-    .pdf-viewer iframe { min-height: calc(100vh - 60px); }
-    .pdf-box { max-width: 95%; padding: 20px 15px; }
-    .pdf-preview-container { max-width: 150px; height: 100px; }
-    .pdf-box-title { font-size: 1rem; }
-    .pdf-box-desc { font-size: 0.9rem; }
-}
-
-
-@media (max-width: 320px) {
-    .header { padding: 6px 10px; gap: 8px; }
-    .logo { height: 35px; width: 35px; }
-    .title { font-size: 16px; letter-spacing: 0.8px; }
-    .header-right { gap: 6px; }
-    .profile-btn, .logout-btn { padding: 5px 10px; font-size: 10px; }
-    .navigation { margin: 15px 0; gap: 8px; }
-    .nav-btn { padding: 8px 16px; font-size: 11px; }
-    .carousel-container { padding: 5px; overflow: visible; }
-    .footer-minimal { padding: 10px; }
-    .footer-minimal p { font-size: 10px; }
-    .pdf-box-title { font-size: 1rem; }
-    .pdf-box-desc { font-size: 0.8rem; }
-    .pdf-preview-container { max-width: 120px; height: 80px; }
+    .pdf-viewer    { padding: 8px; }
+    .pdf-viewer iframe { min-height: calc(100vh - 70px); }
 }
     </style>
 </head>
 <body>
 
 <header class="header">
-    <div style="display: flex; align-items: center;">
+    <div style="display:flex;align-items:center;">
         <img src="assets/img/1-4.png" alt="Logo" class="logo">
     </div>
     <h1 class="title">Biblioteca CAT 21</h1>
@@ -407,91 +366,72 @@ body {
     <a class="nav-btn" href="inicio.php"><span>Ir a Inicio</span></a>
 </nav>
 
-<!-- Fila 1: 3 cajas -->
-<div class="carousel-container">
-    <div class="pdf-boxes-container">
+<!-- UN SOLO CONTENEDOR — 6 CAJAS EN GRID -->
+<div class="pdf-section">
+    <div class="pdf-grid">
 
-        <!-- 1. Guía retofitcat21dias -->
+        <!-- 1 -->
         <div class="pdf-box">
-            <div class="pdf-preview-container">
-                <span class="pdf-icon">📄</span>
-            </div>
+            <div class="pdf-icon-wrap">📋</div>
             <h3 class="pdf-box-title">Guía Retofitcat 21 días</h3>
             <p class="pdf-box-desc">Guía completa del reto de 21 días para transformar tu cuerpo y hábitos.</p>
             <div class="pdf-box-buttons">
-                <button class="pdf-box-btn" onclick="openPdfModal('retofitcat', 'Guía Retofitcat 21 días')">Ver PDF</button>
+                <button class="pdf-box-btn" onclick="openPdfModal('retofitcat','Guía Retofitcat 21 días')">Ver PDF</button>
                 <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=1k72V_o01MYjKSzbkUN5P8repfercLPsE&export=download" download>Descargar</a>
             </div>
         </div>
 
-        <!-- 2. Revista Resumen Dic_1 Final -->
+        <!-- 2 -->
         <div class="pdf-box">
-            <div class="pdf-preview-container">
-                <span class="pdf-icon">📰</span>
-            </div>
+            <div class="pdf-icon-wrap">📰</div>
             <h3 class="pdf-box-title">Revista Resumen DIC_1 Final</h3>
             <p class="pdf-box-desc">Resumen de la revista diciembre, edición 1 — resultados y logros del mes.</p>
             <div class="pdf-box-buttons">
-                <button class="pdf-box-btn" onclick="openPdfModal('revista', 'Revista Resumen DIC_1 Final')">Ver PDF</button>
+                <button class="pdf-box-btn" onclick="openPdfModal('revista','Revista Resumen DIC_1 Final')">Ver PDF</button>
                 <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=1VxLyEP9pgvkm4olgAyjR6tkdDMNgljE7&export=download" download>Descargar</a>
             </div>
         </div>
 
-        <!-- 3. Charlas Caseras CAT -->
+        <!-- 3 -->
         <div class="pdf-box">
-            <div class="pdf-preview-container">
-                <span class="pdf-icon">🏠</span>
-            </div>
+            <div class="pdf-icon-wrap">🏠</div>
             <h3 class="pdf-box-title">Charlas Caseras CAT</h3>
             <p class="pdf-box-desc">Material de apoyo para las charlas caseras del programa CAT.</p>
             <div class="pdf-box-buttons">
-                <button class="pdf-box-btn" onclick="openPdfModal('charlas', 'Charlas Caseras CAT')">Ver PDF</button>
+                <button class="pdf-box-btn" onclick="openPdfModal('charlas','Charlas Caseras CAT')">Ver PDF</button>
                 <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=1VxLyEP9pgvkm4olgAyjR6tkdDMNgljE7&export=download" download>Descargar</a>
             </div>
         </div>
 
-    </div>
-</div>
-
-<!-- Fila 2: 3 cajas -->
-<div class="carousel-container">
-    <div class="pdf-boxes-container">
-
-        <!-- 4. Recetario Nutri Amor Corre -->
+        <!-- 4 -->
         <div class="pdf-box">
-            <div class="pdf-preview-container">
-                <span class="pdf-icon">🥗</span>
-            </div>
+            <div class="pdf-icon-wrap">🥗</div>
             <h3 class="pdf-box-title">Recetario Nutri Amor Corre</h3>
             <p class="pdf-box-desc">Recetas nutritivas y deliciosas diseñadas para quienes aman moverse.</p>
             <div class="pdf-box-buttons">
-                <button class="pdf-box-btn" onclick="openPdfModal('recetario', 'Recetario Nutri Amor Corre')">Ver PDF</button>
+                <button class="pdf-box-btn" onclick="openPdfModal('recetario','Recetario Nutri Amor Corre')">Ver PDF</button>
                 <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=14fTySXc3nYjLpqz29n-fTlHu9MlWrZ62&export=download" download>Descargar</a>
             </div>
         </div>
 
-        <!-- 5. Reloj de la Oportunidad -->
+        <!-- 5 -->
         <div class="pdf-box">
-            <div class="pdf-preview-container">
-                <span class="pdf-icon">⏰</span>
-            </div>
+            <div class="pdf-icon-wrap">⏰</div>
             <h3 class="pdf-box-title">Reloj de la Oportunidad</h3>
             <p class="pdf-box-desc">Herramienta para gestionar tu tiempo y aprovechar cada oportunidad.</p>
             <div class="pdf-box-buttons">
-                <button class="pdf-box-btn" onclick="openPdfModal('reloj', 'Reloj de la Oportunidad')">Ver PDF</button>
+                <button class="pdf-box-btn" onclick="openPdfModal('reloj','Reloj de la Oportunidad')">Ver PDF</button>
                 <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=1KPrE1IyYPS6AsRzLtm8FWb4akPy-3CI4&export=download" download>Descargar</a>
             </div>
         </div>
 
-        <!-- 6. Clubes Exitoosos CAT -->
+        <!-- 6 -->
         <div class="pdf-box">
-            <div class="pdf-preview-container">
-                <span class="pdf-icon">🏆</span>
-            </div>
+            <div class="pdf-icon-wrap">🏆</div>
             <h3 class="pdf-box-title">Clubes Exitosos CAT</h3>
             <p class="pdf-box-desc">Guía para construir y liderar clubes exitosos dentro del programa CAT.</p>
             <div class="pdf-box-buttons">
-                <button class="pdf-box-btn" onclick="openPdfModal('clubes', 'Clubes Exitosos CAT')">Ver PDF</button>
+                <button class="pdf-box-btn" onclick="openPdfModal('clubes','Clubes Exitosos CAT')">Ver PDF</button>
                 <a class="pdf-box-btn secondary" href="https://drive.google.com/uc?id=1ofTCjvR0naRmjp89PamCYL9Gtj36o454&export=download" download>Descargar</a>
             </div>
         </div>
@@ -499,7 +439,7 @@ body {
     </div>
 </div>
 
-<!-- Modal visor PDF -->
+<!-- Modal -->
 <div class="pdf-modal" id="pdfModal">
     <div class="pdf-modal-content">
         <div class="pdf-modal-header">
@@ -518,36 +458,29 @@ body {
 
 <script>
 const pdfUrls = {
-    'retofitcat':  'https://drive.google.com/file/d/1k72V_o01MYjKSzbkUN5P8repfercLPsE/preview',
-    'revista':     'https://drive.google.com/file/d/1VxLyEP9pgvkm4olgAyjR6tkdDMNgljE7/preview',
-    'charlas':     'https://drive.google.com/file/d/1VxLyEP9pgvkm4olgAyjR6tkdDMNgljE7/preview',
-    'recetario':   'https://drive.google.com/file/d/14fTySXc3nYjLpqz29n-fTlHu9MlWrZ62/preview',
-    'reloj':       'https://drive.google.com/file/d/1KPrE1IyYPS6AsRzLtm8FWb4akPy-3CI4/preview',
-    'clubes':      'https://drive.google.com/file/d/1ofTCjvR0naRmjp89PamCYL9Gtj36o454/preview'
+    'retofitcat': 'https://drive.google.com/file/d/1k72V_o01MYjKSzbkUN5P8repfercLPsE/preview',
+    'revista':    'https://drive.google.com/file/d/1VxLyEP9pgvkm4olgAyjR6tkdDMNgljE7/preview',
+    'charlas':    'https://drive.google.com/file/d/1VxLyEP9pgvkm4olgAyjR6tkdDMNgljE7/preview',
+    'recetario':  'https://drive.google.com/file/d/14fTySXc3nYjLpqz29n-fTlHu9MlWrZ62/preview',
+    'reloj':      'https://drive.google.com/file/d/1KPrE1IyYPS6AsRzLtm8FWb4akPy-3CI4/preview',
+    'clubes':     'https://drive.google.com/file/d/1ofTCjvR0naRmjp89PamCYL9Gtj36o454/preview'
 };
 
 function openPdfModal(pdfKey, title) {
-    const modal        = document.getElementById('pdfModal');
-    const viewer       = document.getElementById('pdfViewer');
-    const titleElement = document.getElementById('modalTitle');
-    titleElement.textContent = title;
-    viewer.src = pdfUrls[pdfKey];
-    modal.classList.add('active');
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('pdfViewer').src = pdfUrls[pdfKey];
+    document.getElementById('pdfModal').classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
 function closePdfModal() {
-    const modal  = document.getElementById('pdfModal');
-    const viewer = document.getElementById('pdfViewer');
-    modal.classList.remove('active');
-    viewer.src = '';
+    document.getElementById('pdfModal').classList.remove('active');
+    document.getElementById('pdfViewer').src = '';
     document.body.style.overflow = 'auto';
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closePdfModal();
-    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closePdfModal(); });
     document.getElementById('pdfModal').addEventListener('click', function (e) {
         if (e.target === this) closePdfModal();
     });
